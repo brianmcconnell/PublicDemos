@@ -4,7 +4,7 @@ import json
 import requests
 import os
 
-# Step 1: Read the JSON file
+# Step 1: Read the JSON file Change the filepath to your file
 file_path = '/Workspace/Users/dr.b.mcconnell@gmail.com/FinOpsGenie/AWS_GCP_cost_reporting_genie_space_v2.0.json'
 with open(file_path, 'r') as f:
     genie_payload = json.load(f)
