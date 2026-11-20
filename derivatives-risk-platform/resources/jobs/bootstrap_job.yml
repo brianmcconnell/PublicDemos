@@ -1,0 +1,42 @@
+# One-off build of a fresh environment, run by scripts/riskctl.py deploy after `bundle deploy -t fresh`:
+#   setup (schema, volumes, tables, dims) -> backfill (market history + analytics) -> first daily run (trade
+#   lifecycle builds the book from scratch: no watermark yet) -> configure_serving (Lakebase synced tables,
+#   riskapp_cfg, audit table + mask, grants to the app service principal).
+# Safe to rerun: every step is idempotent.
+resources:
+  jobs:
+    bootstrap:
+      name: "[${bundle.target}] risk-platform-bootstrap"
+      tags:
+        project: derivatives-risk-platform
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: setup
+          run_job_task:
+            job_id: ${resources.jobs.setup.id}
+        - task_key: backfill
+          depends_on:
+            - task_key: setup
+          run_job_task:
+            job_id: ${resources.jobs.backfill.id}
+        - task_key: daily
+          depends_on:
+            - task_key: backfill
+          run_job_task:
+            job_id: ${resources.jobs.risk_daily.id}
+        - task_key: configure_serving
+          depends_on:
+            - task_key: daily
+          spark_python_task:
+            python_file: ../../src/jobs/configure_serving.py
+            parameters: ["--catalog", "${var.catalog}", "--schema", "${var.schema}",
+                         "--lakebase_project", "${var.lakebase_project}", "--app_name", "${var.app_name}"]
+          environment_key: serving
+          timeout_seconds: 7200
+      environments:
+        - environment_key: serving
+          spec:
+            environment_version: "6"
+            dependencies:
+              - "psycopg[binary]>=3.1"
+              - "databricks-sdk>=0.100.0"

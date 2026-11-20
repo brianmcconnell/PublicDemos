@@ -1,0 +1,150 @@
+resources:
+  jobs:
+    risk_daily:
+      name: "[${bundle.target}] risk-platform-daily"
+      tags:
+        project: derivatives-risk-platform
+      max_concurrent_runs: 1
+      schedule:
+        quartz_cron_expression: "0 0 6 ? * MON-FRI"
+        timezone_id: America/New_York
+        # PAUSED in a fresh environment until the bootstrap run has loaded data (riskctl.py unpauses it)
+        pause_status: ${var.daily_schedule_status}
+      # Every step runs as a Python script task through src/jobs/run_step.py: the step .py files
+      # are workspace FILES (Databricks source format), which a notebook_task cannot run.
+      # run_step execs the step with dbutils.widgets backed by the --param key=value arguments
+      # and strips %pip magics (packages come from the job environment below).
+      tasks:
+        # --- market data ingest ---
+        - task_key: ingest_fred
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "01_ingest_fred.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}",
+                         "--param", "fred_secret=${var.fred_secret}"]
+          environment_key: default
+          max_retries: 2
+          min_retry_interval_millis: 300000
+        - task_key: ingest_yfinance
+          depends_on:                  # FX loader reads FRED DEX series from bronze_fred_rates
+            - task_key: ingest_fred
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "01_ingest_yfinance.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}"]
+          environment_key: default
+          max_retries: 2
+          min_retry_interval_millis: 300000
+        # --- analytics (depend on both ingest tasks) ---
+        - task_key: bootstrap_curves
+          depends_on:
+            - task_key: ingest_fred
+            - task_key: ingest_yfinance
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "02_bootstrap_curves.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}"]
+          environment_key: default
+        - task_key: calc_hist_vol
+          depends_on:
+            - task_key: bootstrap_curves
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "03_calc_hist_vol.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}"]
+          environment_key: default
+        - task_key: calc_correlation
+          depends_on:
+            - task_key: calc_hist_vol
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "04_calc_correlation.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}"]
+          environment_key: default
+        - task_key: mc_simulation
+          depends_on:
+            - task_key: calc_correlation
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "05_mc_simulation.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}",
+                         "--param", "n_paths=${var.n_paths}"]
+          environment_key: default
+          timeout_seconds: 3600
+        # --- risk-curves-app reference data + Lakebase (riskapp) sync ---
+        - task_key: build_app_reference
+          depends_on:
+            - task_key: mc_simulation
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "06_build_app_reference.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}"]
+          environment_key: default
+        # Triggers the pipelines behind the <catalog>.riskapp synced tables (found by name, so no fixed pipeline
+        # id per environment). Before the synced tables exist (first bootstrap run) it reports and skips.
+        - task_key: refresh_lakebase_sync
+          depends_on:
+            - task_key: build_app_reference
+          spark_python_task:
+            python_file: ../../src/jobs/refresh_lakebase_sync.py
+            parameters: ["--catalog", "${var.catalog}"]
+          environment_key: default
+        # --- trades (parallel with analytics) ---
+        - task_key: bloomberg_adapter
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "06_bloomberg_adapter.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}"]
+          environment_key: default
+        # Daily trade lifecycle: new trades at market, maturities (MATURED, never deleted), IRS resets from the
+        # market curve. Replaces 08_generate_trades, which regenerates (overwrites) the whole book.
+        - task_key: trade_lifecycle
+          depends_on:
+            - task_key: bloomberg_adapter
+            - task_key: bootstrap_curves
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "09_trade_lifecycle.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}",
+                         "--param", "history_years=3", "--param", "rebuild=false", "--param", "run_id={{job.run_id}}"]
+          environment_key: default
+          timeout_seconds: 5400
+        # --- DQ checks (after trades + sim) ---
+        - task_key: dqx_monitors
+          depends_on:
+            - task_key: mc_simulation
+            - task_key: trade_lifecycle
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "10_dqx_monitors.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}"]
+          environment_key: default
+        # --- risk calculations ---
+        # 13 writes both gold_cpty_exposure and gold_book_var (VaR / ES), so 14_calc_var is no longer run.
+        - task_key: calc_exposure
+          depends_on:
+            - task_key: dqx_monitors
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "13_calc_exposure.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}",
+                         "--param", "max_bins=0"]
+          environment_key: default
+          timeout_seconds: 5400
+        # --- greeks, MTM, hierarchy roll-ups, market snapshot and VaR history (per run) ---
+        # 15 parses its own --catalog / --schema / --run_id / --n_parts, so it runs directly.
+        - task_key: calc_sensitivities
+          depends_on:
+            - task_key: calc_exposure
+          spark_python_task:
+            python_file: ../../src/notebooks/15_calc_sensitivities.py
+            parameters: ["--catalog", "${var.catalog}", "--schema", "${var.schema}",
+                         "--run_id", "{{job.run_id}}", "--n_parts", "1200"]
+          environment_key: default
+          timeout_seconds: 5400
+        # --- evidence ---
+        - task_key: collect_evidence
+          depends_on:
+            - task_key: calc_sensitivities
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "99_collect_evidence.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}"]
+          environment_key: default
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "6"   # 6+ needed for UC secrets: dbutils.secrets.get(catalog=, schema=, key=)
+            dependencies:
+              - QuantLib
+              - yfinance
+              - fredapi
+              - requests

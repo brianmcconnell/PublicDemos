@@ -1,0 +1,12 @@
+command:
+  - streamlit
+  - run
+  - app.py
+env:
+  - name: LAKEBASE_ENDPOINT
+    valueFrom: postgres
+  # Comma-separated emails allowed to add, edit or remove tenors; everyone else sees the list read-only
+  - name: APP_EDITORS
+    value: brian.mcconnell@databricks.com
+  - name: STREAMLIT_BROWSER_GATHER_USAGE_STATS
+    value: "false"

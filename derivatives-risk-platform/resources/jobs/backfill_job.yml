@@ -1,0 +1,38 @@
+resources:
+  jobs:
+    backfill:
+      name: "[${bundle.target}] risk-platform-backfill"
+      tags:
+        project: derivatives-risk-platform
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: backfill_market
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "01b_backfill_market.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}",
+                         "--param", "fred_secret=${var.fred_secret}"]
+          environment_key: default
+          max_retries: 1
+        - task_key: validate_backfill
+          depends_on:
+            - task_key: backfill_market
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "01c_validate_backfill.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}"]
+          environment_key: default
+        - task_key: backfill_analytics
+          depends_on:
+            - task_key: validate_backfill
+          spark_python_task:
+            python_file: ../../src/jobs/run_step.py
+            parameters: ["--step", "02b_backfill_analytics.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}"]
+          environment_key: default
+          timeout_seconds: 10800
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "6"   # 6+ for UC secrets (FRED key)
+            dependencies:
+              - QuantLib
+              - yfinance
+              - fredapi

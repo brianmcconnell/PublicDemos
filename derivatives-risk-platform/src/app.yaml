@@ -1,0 +1,22 @@
+# risk-curves-app is deployed from src/ (not src/app/) so the app can import the shared riskcore library
+# (batch pricers, sensitivities, VaR) for the Trade what-if tab.
+command:
+  - streamlit
+  - run
+  - app/app.py
+env:
+  - name: LAKEBASE_ENDPOINT
+    valueFrom: postgres
+  # UC volume with the batch simulation cubes and what-if portfolio paths (app resource "sim-cubes", READ VOLUME)
+  - name: SIM_CUBE_DIR
+    valueFrom: sim-cubes
+  # SQL warehouse used to append what-if runs to the lakehouse audit table (app resource "sql-warehouse")
+  - name: WHATIF_AUDIT_WAREHOUSE
+    valueFrom: sql-warehouse
+  # The audit table is <catalog>.<schema>.whatif_run_audit, derived from SIM_CUBE_DIR (/Volumes/<catalog>/<schema>/sim_cubes)
+  # so the same app.yaml works in every environment; set WHATIF_AUDIT_TABLE only to override.
+  # Comma-separated emails allowed to add, edit or remove tenors; everyone else sees the list read-only
+  - name: APP_EDITORS
+    value: brian.mcconnell@databricks.com
+  - name: STREAMLIT_BROWSER_GATHER_USAGE_STATS
+    value: "false"

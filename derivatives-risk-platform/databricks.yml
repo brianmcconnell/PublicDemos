@@ -1,0 +1,65 @@
+bundle:
+  name: derivatives-risk-platform
+
+variables:
+  catalog:
+    description: Unity Catalog catalog for all risk tables
+    default: serverless_stable_7s0j2u_catalog
+  schema:
+    description: Schema within the catalog
+    default: market
+  n_paths:
+    description: Number of Monte Carlo simulation paths
+    default: "1000"
+  fred_secret:
+    description: UC secret scope.key for the FRED API key
+    default: serverless_stable_7s0j2u_catalog.brian_mcconnell.fred_api_key
+  app_name:
+    description: Databricks App name (workspace-global; dev gets a per-developer copy, prod is the shared app)
+    default: risk-curves-${workspace.current_user.domain_friendly_name}
+  app_warehouse_id:
+    description: SQL warehouse the app uses to write the what-if audit table (Serverless Starter Warehouse)
+    default: 00b68b68ca99ca59
+  lakebase_project:
+    description: Lakebase project the app connects to (production branch, databricks_postgres database)
+    default: riskapp
+  daily_schedule_status:
+    description: risk_daily schedule state; fresh environments start PAUSED until the bootstrap run has loaded data
+    default: UNPAUSED
+
+workspace:
+  root_path: /Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+
+include:
+  - resources/jobs/*.yml
+  - resources/apps/*.yml
+
+# Fresh environments are built and removed with scripts/riskctl.py (deploy / destroy / status), which wraps
+# `bundle deploy -t fresh` with a pre-flight check, Lakebase project creation, the bootstrap run, the dashboard
+# and Genie agent. Do not deploy the fresh target by hand.
+
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      catalog: serverless_stable_7s0j2u_catalog
+      schema: market
+      n_paths: "1000"
+  prod:
+    mode: production
+    variables:
+      catalog: serverless_stable_7s0j2u_catalog
+      schema: market
+      n_paths: "2000"
+      app_name: risk-curves-app
+  fresh:
+    # catalog, fred_secret and app_warehouse_id are always passed by riskctl.py (--var); one state per catalog
+    workspace:
+      root_path: /Users/${workspace.current_user.userName}/.bundle/${bundle.name}/fresh/${var.catalog}
+    variables:
+      schema: market
+      n_paths: "1000"
+      app_name: risk-curves-app
+      lakebase_project: riskapp
+      daily_schedule_status: PAUSED

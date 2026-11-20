@@ -1,0 +1,36 @@
+# risk-curves-app: curves, simulated rates, tenors and the Trade what-if tab.
+# Source is src/ (not src/app/) so the app can import the shared riskcore library; the start command and env
+# vars live in src/app.yaml. Resource names below are the keys app.yaml reads with valueFrom.
+#
+# prod manages the existing app (created by hand). Bind it once before the first prod deploy:
+#   databricks bundle deployment bind risk_curves_app risk-curves-app -t prod
+# dev deploys a separate per-developer copy (app names are workspace-global; dev mode does not prefix them).
+resources:
+  apps:
+    risk_curves_app:
+      name: ${var.app_name}
+      description: Risk curves, simulated rates, tenors and trade what-if (pricing, VaR/ES and exposure impact)
+      source_code_path: ../../src
+      user_api_scopes:
+        - postgres
+        - genie
+      resources:
+        # Lakebase: synced reference/curve tables (riskapp), tenor config (riskapp_cfg), what-if trades and runs
+        # (riskapp_whatif, created by the app's service principal on first load)
+        - name: postgres
+          postgres:
+            branch: projects/${var.lakebase_project}/branches/production
+            database: projects/${var.lakebase_project}/branches/production/databases/databricks-postgres
+            permission: CAN_CONNECT_AND_CREATE
+        # Batch simulation cubes and what-if portfolio paths (written by 05_mc_simulation / 13_calc_exposure)
+        - name: sim-cubes
+          description: Batch simulation cubes and what-if portfolio paths (written by 05 / 13)
+          uc_securable:
+            securable_full_name: ${var.catalog}.${var.schema}.sim_cubes
+            securable_type: VOLUME
+            permission: READ_VOLUME
+        # Appends what-if runs to ${var.catalog}.${var.schema}.whatif_run_audit (see src/sql/whatif_run_audit.sql)
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.app_warehouse_id}
+            permission: CAN_USE
