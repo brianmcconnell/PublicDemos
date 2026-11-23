@@ -1,0 +1,4489 @@
+{
+  "datasets": [
+    {
+      "name": "ds_usd_curve",
+      "displayName": "USD Zero Curve (Latest)",
+      "queryLines": [
+        "SELECT tenor_years, zero_rate, tenor_label FROM __CATALOG__.__SCHEMA__.gold_zero_curves WHERE ccy = 'USD' AND as_of_date = (SELECT MAX(as_of_date) FROM __CATALOG__.__SCHEMA__.gold_zero_curves) ORDER BY tenor_years"
+      ]
+    },
+    {
+      "name": "ds_all_ccy_curve",
+      "displayName": "All CCY Curves (Latest)",
+      "queryLines": [
+        "SELECT tenor_years, zero_rate, ccy FROM __CATALOG__.__SCHEMA__.gold_zero_curves WHERE as_of_date = (SELECT MAX(as_of_date) FROM __CATALOG__.__SCHEMA__.gold_zero_curves) ORDER BY ccy, tenor_years"
+      ]
+    },
+    {
+      "name": "ds_usd_curve_ts",
+      "displayName": "USD Curve Time Series",
+      "queryLines": [
+        "SELECT as_of_date, zero_rate, tenor_label FROM __CATALOG__.__SCHEMA__.gold_zero_curves WHERE ccy = 'USD' AND tenor_label IN ('1Y', '5Y', '10Y', '30Y') ORDER BY as_of_date"
+      ]
+    },
+    {
+      "name": "ds_vol_snapshot",
+      "displayName": "Vol Snapshot (Top 20)",
+      "queryLines": [
+        "WITH top20 AS (\n",
+        "  SELECT factor_name FROM __CATALOG__.__SCHEMA__.gold_hist_vol\n",
+        "  WHERE calc_date = (SELECT MAX(calc_date) FROM __CATALOG__.__SCHEMA__.gold_hist_vol) AND window = '1y'\n",
+        "  ORDER BY ann_vol DESC LIMIT 20\n",
+        ")\n",
+        "SELECT h.factor_name, h.window, ROUND(h.ann_vol * 100, 2) AS ann_vol_pct\n",
+        "FROM __CATALOG__.__SCHEMA__.gold_hist_vol h\n",
+        "JOIN top20 t ON h.factor_name = t.factor_name\n",
+        "WHERE h.calc_date = (SELECT MAX(calc_date) FROM __CATALOG__.__SCHEMA__.gold_hist_vol)\n",
+        "ORDER BY h.factor_name, h.window"
+      ]
+    },
+    {
+      "name": "ds_vol_ts",
+      "displayName": "EWMA Vol Time Series",
+      "queryLines": [
+        "SELECT calc_date, factor_name, ROUND(ann_vol * 100, 2) AS ann_vol_pct FROM __CATALOG__.__SCHEMA__.gold_hist_vol WHERE window = 'ewma' AND factor_name IN ('IR_USD_DF10Y', 'FX_EUR', 'FX_JPY', 'EQ_AAPL', 'EQ_AMZN') ORDER BY calc_date"
+      ]
+    },
+    {
+      "name": "ds_corr_ts",
+      "displayName": "USD-EUR Correlation Time Series",
+      "queryLines": [
+        "SELECT calc_date, ROUND(correlation, 4) AS correlation FROM __CATALOG__.__SCHEMA__.gold_corr_matrix WHERE factor_i = 'IR_USD_DF10Y' AND factor_j = 'FX_EUR' ORDER BY calc_date"
+      ]
+    },
+    {
+      "name": "ds_hw_latest",
+      "displayName": "HW Parameters (Latest)",
+      "queryLines": [
+        "SELECT ccy, ROUND(alpha, 4) AS alpha, ROUND(sigma, 6) AS sigma, calibration_case, is_fallback, ROUND(vol_df1y, 6) AS vol_df1y, ROUND(vol_df10y, 6) AS vol_df10y FROM __CATALOG__.__SCHEMA__.gold_hw_params WHERE as_of_date = (SELECT MAX(as_of_date) FROM __CATALOG__.__SCHEMA__.gold_hw_params) ORDER BY ccy"
+      ]
+    },
+    {
+      "name": "ds_hw_sigma_ts",
+      "displayName": "HW Sigma Time Series",
+      "queryLines": [
+        "SELECT as_of_date, ccy, ROUND(sigma, 6) AS sigma FROM __CATALOG__.__SCHEMA__.gold_hw_params WHERE ccy IN ('USD', 'EUR', 'GBP', 'JPY') ORDER BY as_of_date"
+      ]
+    },
+    {
+      "name": "ds_hw_cases",
+      "displayName": "HW Calibration Case Distribution",
+      "queryLines": [
+        "SELECT CONCAT('Case ', calibration_case) AS case_label, COUNT(*) AS n FROM __CATALOG__.__SCHEMA__.gold_hw_params GROUP BY calibration_case ORDER BY calibration_case"
+      ]
+    },
+    {
+      "name": "usd_curve",
+      "displayName": "USD Zero Curve (Latest)",
+      "queryLines": [
+        "SELECT\n",
+        "  tenor_years,\n",
+        "  ROUND(zero_rate, 5) AS zero_rate,\n",
+        "  tenor_label\n",
+        "FROM\n",
+        "  __CATALOG__.__SCHEMA__.gold_zero_curves\n",
+        "WHERE\n",
+        "  ccy = 'USD'\n",
+        "  AND as_of_date\n",
+        "    = (\n",
+        "      SELECT\n",
+        "        MAX(as_of_date)\n",
+        "      FROM\n",
+        "        __CATALOG__.__SCHEMA__.gold_zero_curves\n",
+        "    )\n",
+        "ORDER BY\n",
+        "  tenor_years"
+      ]
+    },
+    {
+      "name": "all_ccy_curve",
+      "displayName": "All CCY Curves (Latest)",
+      "queryLines": [
+        "SELECT\n",
+        "  tenor_years,\n",
+        "  ROUND(zero_rate, 5) AS zero_rate,\n",
+        "  ccy\n",
+        "FROM\n",
+        "  __CATALOG__.__SCHEMA__.gold_zero_curves\n",
+        "WHERE\n",
+        "  as_of_date\n",
+        "    = (\n",
+        "      SELECT\n",
+        "        MAX(as_of_date)\n",
+        "      FROM\n",
+        "        __CATALOG__.__SCHEMA__.gold_zero_curves\n",
+        "    )\n",
+        "ORDER BY\n",
+        "  ccy,\n",
+        "  tenor_years"
+      ]
+    },
+    {
+      "name": "vol_snapshot",
+      "displayName": "Vol Snapshot (Top 20)",
+      "queryLines": [
+        "WITH top20 AS (\n",
+        "  SELECT\n",
+        "    factor_name\n",
+        "  FROM\n",
+        "    __CATALOG__.__SCHEMA__.gold_hist_vol\n",
+        "  WHERE\n",
+        "    calc_date\n",
+        "      = (\n",
+        "        SELECT\n",
+        "          MAX(calc_date)\n",
+        "        FROM\n",
+        "          __CATALOG__.__SCHEMA__.gold_hist_vol\n",
+        "      )\n",
+        "    AND window = '1y'\n",
+        "  ORDER BY\n",
+        "    ann_vol DESC\n",
+        "  LIMIT 20\n",
+        ")\n",
+        "SELECT\n",
+        "  h.factor_name,\n",
+        "  h.window,\n",
+        "  ROUND(h.ann_vol * 100, 2) AS ann_vol_pct\n",
+        "FROM\n",
+        "  __CATALOG__.__SCHEMA__.gold_hist_vol h\n",
+        "    JOIN top20 t\n",
+        "      ON h.factor_name = t.factor_name\n",
+        "WHERE\n",
+        "  h.calc_date\n",
+        "    = (\n",
+        "      SELECT\n",
+        "        MAX(calc_date)\n",
+        "      FROM\n",
+        "        __CATALOG__.__SCHEMA__.gold_hist_vol\n",
+        "    )\n",
+        "ORDER BY\n",
+        "  h.factor_name,\n",
+        "  h.window"
+      ]
+    },
+    {
+      "name": "vol_ts",
+      "displayName": "EWMA Vol Time Series",
+      "queryLines": [
+        "SELECT\n",
+        "  calc_date,\n",
+        "  factor_name,\n",
+        "  ROUND(ann_vol * 100, 2) AS ann_vol_pct\n",
+        "FROM\n",
+        "  __CATALOG__.__SCHEMA__.gold_hist_vol\n",
+        "WHERE\n",
+        "  window = 'ewma'\n",
+        "  AND factor_name IN ('IR_USD_DF10Y', 'FX_EUR', 'FX_JPY', 'EQ_AAPL', 'EQ_AMZN')\n",
+        "ORDER BY\n",
+        "  calc_date"
+      ]
+    },
+    {
+      "name": "usd_curve_ts",
+      "displayName": "USD Curve Time Series",
+      "queryLines": [
+        "SELECT\n",
+        "  as_of_date,\n",
+        "  ROUND(zero_rate, 5) AS zero_rate,\n",
+        "  tenor_label\n",
+        "FROM\n",
+        "  __CATALOG__.__SCHEMA__.gold_zero_curves\n",
+        "WHERE\n",
+        "  ccy = 'USD'\n",
+        "  AND tenor_label IN ('1Y', '5Y', '10Y', '30Y')\n",
+        "ORDER BY\n",
+        "  as_of_date"
+      ]
+    },
+    {
+      "name": "corr_matrix",
+      "displayName": "Core Correlation Matrix",
+      "queryLines": [
+        "SELECT\n",
+        "  factor_i,\n",
+        "  factor_j,\n",
+        "  ROUND(correlation, 3) AS correlation\n",
+        "FROM\n",
+        "  __CATALOG__.__SCHEMA__.gold_corr_matrix\n",
+        "WHERE\n",
+        "  calc_date\n",
+        "    = (\n",
+        "      SELECT\n",
+        "        MAX(calc_date)\n",
+        "      FROM\n",
+        "        __CATALOG__.__SCHEMA__.gold_corr_matrix\n",
+        "    )\n",
+        "  AND factor_i IN (\n",
+        "    'IR_USD_DF10Y',\n",
+        "    'IR_EUR_DF10Y',\n",
+        "    'IR_GBP_DF10Y',\n",
+        "    'IR_JPY_DF10Y',\n",
+        "    'IR_CHF_DF10Y',\n",
+        "    'IR_CAD_DF10Y',\n",
+        "    'FX_EUR',\n",
+        "    'FX_GBP',\n",
+        "    'FX_JPY',\n",
+        "    'FX_CHF',\n",
+        "    'FX_CAD'\n",
+        "  )\n",
+        "  AND factor_j IN (\n",
+        "    'IR_USD_DF10Y',\n",
+        "    'IR_EUR_DF10Y',\n",
+        "    'IR_GBP_DF10Y',\n",
+        "    'IR_JPY_DF10Y',\n",
+        "    'IR_CHF_DF10Y',\n",
+        "    'IR_CAD_DF10Y',\n",
+        "    'FX_EUR',\n",
+        "    'FX_GBP',\n",
+        "    'FX_JPY',\n",
+        "    'FX_CHF',\n",
+        "    'FX_CAD'\n",
+        "  )"
+      ]
+    },
+    {
+      "name": "usd10y_vol",
+      "displayName": "USD 10Y EWMA Vol",
+      "queryLines": [
+        "SELECT\n",
+        "  ROUND(ann_vol * 100, 2) AS vol_pct\n",
+        "FROM\n",
+        "  __CATALOG__.__SCHEMA__.gold_hist_vol\n",
+        "WHERE\n",
+        "  calc_date\n",
+        "    = (\n",
+        "      SELECT\n",
+        "        MAX(calc_date)\n",
+        "      FROM\n",
+        "        __CATALOG__.__SCHEMA__.gold_hist_vol\n",
+        "    )\n",
+        "  AND factor_name = 'IR_USD_DF10Y'\n",
+        "  AND window = 'ewma'"
+      ]
+    },
+    {
+      "name": "corr_ts",
+      "displayName": "USD-EUR Correlation TS",
+      "queryLines": [
+        "SELECT\n",
+        "  calc_date,\n",
+        "  ROUND(correlation, 4) AS correlation\n",
+        "FROM\n",
+        "  __CATALOG__.__SCHEMA__.gold_corr_matrix\n",
+        "WHERE\n",
+        "  factor_i = 'IR_USD_DF10Y'\n",
+        "  AND factor_j = 'FX_EUR'\n",
+        "ORDER BY\n",
+        "  calc_date"
+      ]
+    },
+    {
+      "name": "hw_latest",
+      "displayName": "HW Parameters (Latest)",
+      "queryLines": [
+        "SELECT\n",
+        "  ccy,\n",
+        "  ROUND(alpha, 4) AS alpha,\n",
+        "  ROUND(sigma, 6) AS sigma,\n",
+        "  calibration_case,\n",
+        "  is_fallback,\n",
+        "  ROUND(vol_df1y, 6) AS vol_df1y,\n",
+        "  ROUND(vol_df10y, 6) AS vol_df10y\n",
+        "FROM\n",
+        "  __CATALOG__.__SCHEMA__.gold_hw_params\n",
+        "WHERE\n",
+        "  as_of_date\n",
+        "    = (\n",
+        "      SELECT\n",
+        "        MAX(as_of_date)\n",
+        "      FROM\n",
+        "        __CATALOG__.__SCHEMA__.gold_hw_params\n",
+        "    )\n",
+        "ORDER BY\n",
+        "  ccy"
+      ]
+    },
+    {
+      "name": "hw_sigma_ts",
+      "displayName": "HW Sigma Time Series",
+      "queryLines": [
+        "SELECT\n",
+        "  as_of_date,\n",
+        "  ccy,\n",
+        "  ROUND(sigma, 6) AS sigma\n",
+        "FROM\n",
+        "  __CATALOG__.__SCHEMA__.gold_hw_params\n",
+        "WHERE\n",
+        "  ccy IN ('USD', 'EUR', 'GBP', 'JPY')\n",
+        "ORDER BY\n",
+        "  as_of_date"
+      ]
+    },
+    {
+      "name": "hw_cases",
+      "displayName": "HW Case Distribution",
+      "queryLines": [
+        "SELECT\n",
+        "  CONCAT('Case ', calibration_case) AS case_label,\n",
+        "  COUNT(*) AS n\n",
+        "FROM\n",
+        "  __CATALOG__.__SCHEMA__.gold_hw_params\n",
+        "GROUP BY\n",
+        "  calibration_case\n",
+        "ORDER BY\n",
+        "  calibration_case"
+      ]
+    },
+    {
+      "name": "cpty_exposure",
+      "displayName": "Counterparty Exposure",
+      "config": {
+        "source": "__CATALOG__.__SCHEMA__.gold_cpty_exposure",
+        "measures": [
+          {
+            "name": "ee",
+            "expr": "SUM(ee)",
+            "displayName": "EE",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "pfe95",
+            "expr": "SUM(pfe_95)",
+            "displayName": "PFE95",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "peak_pfe95",
+            "expr": "MAX(pfe_95)",
+            "displayName": "Peak PFE95",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "peak_ee",
+            "expr": "MAX(ee)",
+            "displayName": "Peak EE",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "trades",
+            "expr": "MAX(n_trades)",
+            "displayName": "Trades"
+          }
+        ],
+        "version": "1.1",
+        "comment": "Simulated counterparty exposure. netting_set_id = 'ALL' is the counterparty total; other values are netting sets or 'NA' (unnetted trades). USD.",
+        "dimensions": [
+          {
+            "expr": "as_of_date",
+            "displayName": "As-of Date"
+          },
+          {
+            "expr": "counterparty_id",
+            "displayName": "Counterparty"
+          },
+          {
+            "expr": "netting_set_id",
+            "displayName": "Netting Set"
+          },
+          {
+            "expr": "time_step",
+            "displayName": "Time Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "counterparty",
+      "displayName": "Counterparty",
+      "config": {
+        "version": "1.1",
+        "source": "__CATALOG__.__SCHEMA__.dim_counterparty",
+        "dimensions": [
+          {
+            "expr": "counterparty_id",
+            "displayName": "Counterparty ID"
+          },
+          {
+            "expr": "name",
+            "displayName": "Counterparty Name"
+          },
+          {
+            "expr": "rating",
+            "displayName": "Rating"
+          },
+          {
+            "expr": "sector",
+            "displayName": "Sector"
+          },
+          {
+            "expr": "country",
+            "displayName": "Country"
+          }
+        ],
+        "measures": [
+          {
+            "name": "counterparty_count",
+            "expr": "COUNT(1)",
+            "displayName": "Counterparties"
+          }
+        ]
+      }
+    },
+    {
+      "name": "book_var",
+      "displayName": "Book VaR",
+      "config": {
+        "source": "__CATALOG__.__SCHEMA__.gold_book_var",
+        "measures": [
+          {
+            "name": "var95",
+            "expr": "SUM(var_95)",
+            "displayName": "VaR95 (sum of books)",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "var95_1d",
+            "expr": "SUM(var_95) FILTER (WHERE time_step = 1)",
+            "displayName": "1-day VaR95",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "es95_1d",
+            "expr": "SUM(expected_shortfall_95) FILTER (WHERE time_step = 1)",
+            "displayName": "1-day ES95",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "p5_pv_1d",
+            "expr": "SUM(p5_pv) FILTER (WHERE time_step = 1)",
+            "displayName": "P5 PV (1-day)",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "mean_pv_1d",
+            "expr": "SUM(mean_pv) FILTER (WHERE time_step = 1)",
+            "displayName": "Mean PV (1-day)",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "p95_pv_1d",
+            "expr": "SUM(p95_pv) FILTER (WHERE time_step = 1)",
+            "displayName": "P95 PV (1-day)",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "total_trades",
+            "expr": "SUM(n_trades) FILTER (WHERE time_step = 1)",
+            "displayName": "Total Trades"
+          },
+          {
+            "name": "max_book_var_1d",
+            "expr": "MAX(var_95) FILTER (WHERE time_step = 1)",
+            "displayName": "Largest Book 1-day VaR95",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          }
+        ],
+        "version": "1.1",
+        "comment": "Monte Carlo book PV distribution and VaR. time_step 1 is the 1-day horizon. USD.",
+        "dimensions": [
+          {
+            "expr": "as_of_date",
+            "displayName": "As-of Date"
+          },
+          {
+            "expr": "book_id",
+            "displayName": "Book"
+          },
+          {
+            "expr": "time_step",
+            "displayName": "Time Step"
+          }
+        ]
+      }
+    },
+    {
+      "name": "book",
+      "displayName": "Book",
+      "config": {
+        "version": "1.1",
+        "source": "__CATALOG__.__SCHEMA__.dim_book",
+        "dimensions": [
+          {
+            "expr": "book_id",
+            "displayName": "Book ID"
+          },
+          {
+            "expr": "desk",
+            "displayName": "Desk"
+          },
+          {
+            "expr": "business_unit",
+            "displayName": "Business Unit"
+          }
+        ],
+        "measures": [
+          {
+            "name": "book_count",
+            "expr": "COUNT(1)",
+            "displayName": "Books"
+          }
+        ]
+      }
+    },
+    {
+      "name": "trade_sens",
+      "displayName": "Trade Sensitivities",
+      "config": {
+        "source": "SELECT s.as_of_date, s.run_id, s.trade_id, s.product, s.book_id, s.desk, s.business_unit,\n       s.sensitivity_type, s.risk_class, s.risk_factor, coalesce(s.tenor_label, '-') AS tenor_label, s.value_usd,\n       m.counterparty_id, m.ccy, m.ccy_2, m.underlying, m.notional, m.maturity_date, m.mtm_usd,\n       concat(s.business_unit, ' / ', s.desk) AS desk_path\nFROM __CATALOG__.__SCHEMA__.v_trade_sensitivity_latest s\nLEFT JOIN __CATALOG__.__SCHEMA__.v_trade_mtm_latest m\n  ON m.as_of_date = s.as_of_date AND m.run_id = s.run_id AND m.trade_id = s.trade_id\nWHERE s.as_of_date = coalesce(as_of_sel, (SELECT max(as_of_date) FROM __CATALOG__.__SCHEMA__.v_trade_mtm_latest))",
+        "measures": [
+          {
+            "name": "value",
+            "expr": "SUM(value_usd) FILTER (WHERE sensitivity_type = measure_sel)",
+            "displayName": "Selected Measure (USD)",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "value_all",
+            "expr": "SUM(value_usd)",
+            "displayName": "Value (USD)",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "trades",
+            "expr": "COUNT(DISTINCT trade_id)",
+            "displayName": "Trades"
+          }
+        ],
+        "version": "1.1",
+        "comment": "v_trade_sensitivity_latest with trade MTM and terms from v_trade_mtm_latest (same as_of_date and run_id), for one as-of date (as_of_sel, default latest). USD cash greeks.",
+        "dimensions": [
+          {
+            "expr": "as_of_date",
+            "displayName": "As-of Date"
+          },
+          {
+            "expr": "trade_id",
+            "displayName": "Trade"
+          },
+          {
+            "expr": "product",
+            "displayName": "Product"
+          },
+          {
+            "expr": "business_unit",
+            "displayName": "Business Unit"
+          },
+          {
+            "expr": "desk",
+            "displayName": "Desk"
+          },
+          {
+            "expr": "desk_path",
+            "displayName": "Business Unit / Desk"
+          },
+          {
+            "expr": "book_id",
+            "displayName": "Book"
+          },
+          {
+            "expr": "sensitivity_type",
+            "displayName": "Sensitivity"
+          },
+          {
+            "expr": "risk_class",
+            "displayName": "Risk Class"
+          },
+          {
+            "expr": "risk_factor",
+            "displayName": "Risk Factor"
+          },
+          {
+            "expr": "tenor_label",
+            "displayName": "Tenor"
+          },
+          {
+            "expr": "counterparty_id",
+            "displayName": "Counterparty"
+          },
+          {
+            "expr": "ccy",
+            "displayName": "Currency"
+          },
+          {
+            "expr": "ccy_2",
+            "displayName": "Currency 2"
+          },
+          {
+            "expr": "underlying",
+            "displayName": "Underlying"
+          },
+          {
+            "expr": "maturity_date",
+            "displayName": "Maturity"
+          },
+          {
+            "expr": "notional",
+            "displayName": "Notional"
+          },
+          {
+            "expr": "mtm_usd",
+            "displayName": "MTM (USD)",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          }
+        ],
+        "parameters": [
+          {
+            "name": "measure_sel",
+            "dataType": "STRING",
+            "default": "'IR_DV01'"
+          },
+          {
+            "name": "as_of_sel",
+            "dataType": "DATE",
+            "default": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "risk_history",
+      "displayName": "Risk Run History",
+      "config": {
+        "source": "WITH runs AS (\n  SELECT as_of_date, total_mtm_usd, n_trades\n  FROM __CATALOG__.__SCHEMA__.v_risk_runs\n  QUALIFY run_ts = max(run_ts) OVER (PARTITION BY as_of_date)),\nvar AS (\n  SELECT as_of_date, sum(var_95) AS var95_1d, sum(expected_shortfall_95) AS es95_1d\n  FROM __CATALOG__.__SCHEMA__.v_var_latest\n  WHERE time_step = 1 GROUP BY as_of_date)\nSELECT coalesce(r.as_of_date, v.as_of_date) AS as_of_date, r.total_mtm_usd, r.n_trades, v.var95_1d, v.es95_1d\nFROM runs r FULL OUTER JOIN var v ON r.as_of_date = v.as_of_date",
+        "measures": [
+          {
+            "name": "total_mtm",
+            "expr": "SUM(total_mtm_usd)",
+            "displayName": "Total MTM (USD)",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "var95_1d",
+            "expr": "SUM(var95_1d)",
+            "displayName": "1-day VaR95 (sum of books)",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "es95_1d",
+            "expr": "SUM(es95_1d)",
+            "displayName": "1-day ES95 (sum of books)",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          }
+        ],
+        "version": "1.1",
+        "comment": "Total MTM per as_of_date from v_risk_runs (latest run per date) and 1-day (time_step 1) VaR95 / ES95 summed over books from v_var_latest (undiversified).",
+        "dimensions": [
+          {
+            "expr": "as_of_date",
+            "displayName": "As-of Date"
+          },
+          {
+            "name": "has_sensitivities",
+            "expr": "CASE WHEN total_mtm_usd IS NOT NULL THEN 'yes' ELSE 'no' END",
+            "displayName": "Has Sensitivity Run"
+          }
+        ]
+      }
+    },
+    {
+      "name": "trade_inputs",
+      "displayName": "Trade Market Inputs",
+      "config": {
+        "source": "SELECT i.*,\n       CASE WHEN i.tenor_label IS NULL THEN NULL\n            WHEN i.tenor_label LIKE '%M' THEN cast(left(i.tenor_label, length(i.tenor_label) - 1) AS double) / 12\n            ELSE cast(left(i.tenor_label, length(i.tenor_label) - 1) AS double) END AS tenor_years\nFROM __CATALOG__.__SCHEMA__.v_trade_market_inputs_latest i\nWHERE i.as_of_date = coalesce(as_of_sel, (SELECT max(as_of_date) FROM __CATALOG__.__SCHEMA__.v_market_snapshot_latest))",
+        "measures": [
+          {
+            "name": "inputs",
+            "expr": "COUNT(1)",
+            "displayName": "Inputs"
+          }
+        ],
+        "version": "1.1",
+        "comment": "v_trade_market_inputs_latest for one as-of date (as_of_sel, default latest). Zero rates, vols, HW sigma and dividend yields are decimals (0.05 = 5%).",
+        "dimensions": [
+          {
+            "expr": "as_of_date",
+            "displayName": "As-of Date"
+          },
+          {
+            "expr": "trade_id",
+            "displayName": "Trade"
+          },
+          {
+            "expr": "product",
+            "displayName": "Product"
+          },
+          {
+            "expr": "book_id",
+            "displayName": "Book"
+          },
+          {
+            "expr": "risk_factor",
+            "displayName": "Risk Factor"
+          },
+          {
+            "expr": "risk_class",
+            "displayName": "Risk Class"
+          },
+          {
+            "expr": "input_type",
+            "displayName": "Input"
+          },
+          {
+            "expr": "tenor_label",
+            "displayName": "Tenor"
+          },
+          {
+            "expr": "tenor_years",
+            "displayName": "Tenor (Years)"
+          },
+          {
+            "expr": "value",
+            "displayName": "Value"
+          },
+          {
+            "expr": "description",
+            "displayName": "Description"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "as_of_sel",
+            "dataType": "DATE",
+            "default": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "sens_hierarchy",
+      "displayName": "Sensitivity Hierarchy",
+      "config": {
+        "source": "SELECT h.*, concat(h.business_unit, ' / ', h.desk) AS desk_path\nFROM __CATALOG__.__SCHEMA__.v_risk_hierarchy_latest h\nWHERE h.level = 'BOOK'\n  AND h.as_of_date = coalesce(as_of_sel, (SELECT max(as_of_date) FROM __CATALOG__.__SCHEMA__.v_risk_hierarchy_latest))",
+        "measures": [
+          {
+            "displayName": "Selected Measure (USD)",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            },
+            "name": "value",
+            "expr": "SUM(value_usd) FILTER (WHERE measure = measure_sel AND (measure = 'MTM' OR risk_factor <> 'ALL'))",
+            "comment": "The selected measure (measure_sel) summed over risk factors and, for IR_KRD, tenors."
+          },
+          {
+            "name": "mtm",
+            "expr": "SUM(value_usd) FILTER (WHERE measure = 'MTM')",
+            "displayName": "MTM (USD)",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          },
+          {
+            "name": "krd",
+            "expr": "SUM(value_usd) FILTER (WHERE measure = 'IR_KRD' AND risk_factor <> 'ALL')",
+            "displayName": "Key Rate (USD per +1bp)",
+            "format": {
+              "type": "currency",
+              "currencyCode": "USD",
+              "abbreviation": "compact"
+            }
+          }
+        ],
+        "version": "1.1",
+        "comment": "Book-level rows of v_risk_hierarchy_latest (latest run per as_of_date) for one as-of date (as_of_sel, default latest). Business unit / desk roll-ups are sums of books. USD cash greeks.",
+        "dimensions": [
+          {
+            "expr": "as_of_date",
+            "displayName": "As-of Date"
+          },
+          {
+            "expr": "business_unit",
+            "displayName": "Business Unit"
+          },
+          {
+            "expr": "desk",
+            "displayName": "Desk"
+          },
+          {
+            "expr": "desk_path",
+            "displayName": "Business Unit / Desk"
+          },
+          {
+            "expr": "book_id",
+            "displayName": "Book"
+          },
+          {
+            "expr": "measure",
+            "displayName": "Measure"
+          },
+          {
+            "expr": "risk_class",
+            "displayName": "Risk Class"
+          },
+          {
+            "expr": "risk_factor",
+            "displayName": "Risk Factor"
+          },
+          {
+            "expr": "tenor_label",
+            "displayName": "Tenor"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "measure_sel",
+            "dataType": "STRING",
+            "default": "'IR_DV01'"
+          },
+          {
+            "name": "as_of_sel",
+            "dataType": "DATE",
+            "default": null
+          }
+        ]
+      }
+    }
+  ],
+  "relationshipGraphs": [
+    {
+      "sources": [
+        {
+          "name": "USD_Zero_Curve_Latest",
+          "datasetName": "ds_usd_curve"
+        },
+        {
+          "name": "All_CCY_Curves_Latest",
+          "datasetName": "ds_all_ccy_curve"
+        },
+        {
+          "name": "USD_Curve_Time_Series",
+          "datasetName": "ds_usd_curve_ts"
+        },
+        {
+          "name": "Vol_Snapshot_Top_20",
+          "datasetName": "ds_vol_snapshot"
+        },
+        {
+          "name": "EWMA_Vol_Time_Series",
+          "datasetName": "ds_vol_ts"
+        },
+        {
+          "name": "USDEUR_Correlation_Time_Series",
+          "datasetName": "ds_corr_ts"
+        },
+        {
+          "name": "HW_Parameters_Latest",
+          "datasetName": "ds_hw_latest"
+        },
+        {
+          "name": "HW_Sigma_Time_Series",
+          "datasetName": "ds_hw_sigma_ts"
+        },
+        {
+          "name": "HW_Calibration_Case_Distribution",
+          "datasetName": "ds_hw_cases"
+        },
+        {
+          "name": "USD_Zero_Curve_Latest_1",
+          "datasetName": "usd_curve"
+        },
+        {
+          "name": "All_CCY_Curves_Latest_1",
+          "datasetName": "all_ccy_curve"
+        },
+        {
+          "name": "Vol_Snapshot_Top_20_1",
+          "datasetName": "vol_snapshot"
+        },
+        {
+          "name": "EWMA_Vol_Time_Series_1",
+          "datasetName": "vol_ts"
+        },
+        {
+          "name": "USD_Curve_Time_Series_1",
+          "datasetName": "usd_curve_ts"
+        },
+        {
+          "name": "Core_Correlation_Matrix_1",
+          "datasetName": "corr_matrix"
+        },
+        {
+          "name": "USD_10Y_EWMA_Vol_1",
+          "datasetName": "usd10y_vol"
+        },
+        {
+          "name": "USDEUR_Correlation_TS",
+          "datasetName": "corr_ts"
+        },
+        {
+          "name": "HW_Parameters_Latest_1",
+          "datasetName": "hw_latest"
+        },
+        {
+          "name": "HW_Sigma_Time_Series_1",
+          "datasetName": "hw_sigma_ts"
+        },
+        {
+          "name": "HW_Case_Distribution",
+          "datasetName": "hw_cases"
+        },
+        {
+          "name": "Counterparty_Exposure",
+          "datasetName": "cpty_exposure"
+        },
+        {
+          "name": "Counterparty",
+          "datasetName": "counterparty"
+        },
+        {
+          "name": "Book_VaR",
+          "datasetName": "book_var"
+        },
+        {
+          "name": "Book",
+          "datasetName": "book"
+        },
+        {
+          "name": "Trade_Sensitivities",
+          "datasetName": "trade_sens"
+        },
+        {
+          "name": "Risk_Run_History",
+          "datasetName": "risk_history"
+        },
+        {
+          "name": "Trade_Market_Inputs",
+          "datasetName": "trade_inputs"
+        },
+        {
+          "name": "Sensitivity_Hierarchy",
+          "datasetName": "sens_hierarchy"
+        }
+      ],
+      "relationships": [
+        {
+          "name": "relationship_0",
+          "from": "Counterparty_Exposure",
+          "to": "Counterparty",
+          "on": "`Counterparty_Exposure`.`counterparty_id` = `Counterparty`.`counterparty_id`",
+          "cardinality": "CARDINALITY_MANY_TO_ONE"
+        },
+        {
+          "name": "relationship_1",
+          "from": "Book_VaR",
+          "to": "Book",
+          "on": "`Book_VaR`.`book_id` = `Book`.`book_id`",
+          "cardinality": "CARDINALITY_MANY_TO_ONE"
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "page_curves",
+      "displayName": "Yield Curves",
+      "layout": [
+        {
+          "widget": {
+            "name": "t1",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Yield Curves\n",
+                "Zero rate term structures from QuantLib bootstrap (USD) and OECD proxy interpolation (non-USD)."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "w1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_usd_curve",
+                  "fields": [
+                    {
+                      "name": "tenor_years",
+                      "expression": "`tenor_years`"
+                    },
+                    {
+                      "name": "zero_rate",
+                      "expression": "`zero_rate`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "tenor_years",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Tenor (Years)"
+                },
+                "y": {
+                  "fieldName": "zero_rate",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Zero Rate"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "w2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_all_ccy_curve",
+                  "fields": [
+                    {
+                      "name": "tenor_years",
+                      "expression": "`tenor_years`"
+                    },
+                    {
+                      "name": "zero_rate",
+                      "expression": "`zero_rate`"
+                    },
+                    {
+                      "name": "ccy",
+                      "expression": "`ccy`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "tenor_years",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Tenor (Years)"
+                },
+                "y": {
+                  "fieldName": "zero_rate",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Zero Rate"
+                },
+                "color": {
+                  "fieldName": "ccy",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "ccy"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "t2",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### USD Zero Rates Over Time"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "w3",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_usd_curve_ts",
+                  "fields": [
+                    {
+                      "name": "as_of_date",
+                      "expression": "`as_of_date`"
+                    },
+                    {
+                      "name": "zero_rate",
+                      "expression": "`zero_rate`"
+                    },
+                    {
+                      "name": "tenor_label",
+                      "expression": "`tenor_label`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "as_of_date",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Date"
+                },
+                "y": {
+                  "fieldName": "zero_rate",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Zero Rate"
+                },
+                "color": {
+                  "fieldName": "tenor_label",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "tenor_label"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 12,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "vol_surface",
+      "displayName": "Volatility Surface",
+      "layout": [
+        {
+          "widget": {
+            "name": "vol_bar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "vol_snapshot",
+                  "fields": [
+                    {
+                      "name": "window",
+                      "expression": "`window`"
+                    },
+                    {
+                      "name": "factor_name",
+                      "expression": "`factor_name`"
+                    },
+                    {
+                      "name": "sum(ann_vol_pct)",
+                      "expression": "SUM(`ann_vol_pct`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Vol by Factor and Window"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "factor_name",
+                  "displayName": "factor_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(ann_vol_pct)",
+                  "displayName": "ann_vol_pct",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "window",
+                  "displayName": "window",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 9,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "vol_ts",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "vol_ts",
+                  "fields": [
+                    {
+                      "name": "factor_name",
+                      "expression": "`factor_name`"
+                    },
+                    {
+                      "name": "calc_date",
+                      "expression": "`calc_date`"
+                    },
+                    {
+                      "name": "sum(ann_vol_pct)",
+                      "expression": "SUM(`ann_vol_pct`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "EWMA Vol — Key Factors Over Time"
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "calc_date",
+                  "displayName": "calc_date",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(ann_vol_pct)",
+                  "displayName": "ann_vol_pct",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "factor_name",
+                  "displayName": "factor_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "vol_header",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Volatility Surface\n",
+                "Annualised volatilities: rolling windows (3M/1Y/3Y/10Y) plus EWMA (λ=0.94)."
+              ]
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 0,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "usd10y_counter",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "usd10y_vol",
+                  "fields": [
+                    {
+                      "name": "vol_pct",
+                      "expression": "`vol_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "USD 10Y DF EWMA Vol (%)"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "vol_pct"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 3
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "correlation",
+      "displayName": "Correlation",
+      "layout": [
+        {
+          "widget": {
+            "name": "corr_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "corr_matrix",
+                  "fields": [
+                    {
+                      "name": "factor_i",
+                      "expression": "`factor_i`"
+                    },
+                    {
+                      "name": "factor_j",
+                      "expression": "`factor_j`"
+                    },
+                    {
+                      "name": "correlation",
+                      "expression": "`correlation`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Core Correlation Matrix"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "factor_i"
+                  },
+                  {
+                    "fieldName": "factor_j"
+                  },
+                  {
+                    "fieldName": "correlation"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "corr_ts",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "USDEUR_Correlation_TS__calc_date",
+                      "expression": "`USDEUR_Correlation_TS`.`calc_date`"
+                    },
+                    {
+                      "name": "sum(USDEUR_Correlation_TS__correlation)",
+                      "expression": "SUM(`USDEUR_Correlation_TS`.`correlation`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "IR\\_USD\\_DF10Y vs FX\\_EUR Correlation",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "USDEUR_Correlation_TS__calc_date",
+                  "displayName": "calc_date",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(USDEUR_Correlation_TS__correlation)",
+                  "displayName": "correlation",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "USDEUR_Correlation_TS__calc_date",
+                  "displayName": "calc_date",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "corr_header",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Correlation Matrix\n",
+                "Pearson correlation (504-day window), nearest-PSD repair. 11 core IR + FX factors."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "hw_calib",
+      "displayName": "Hull-White Calibration",
+      "layout": [
+        {
+          "widget": {
+            "name": "hw_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hw_latest",
+                  "fields": [
+                    {
+                      "name": "ccy",
+                      "expression": "`ccy`"
+                    },
+                    {
+                      "name": "alpha",
+                      "expression": "`alpha`"
+                    },
+                    {
+                      "name": "sigma",
+                      "expression": "`sigma`"
+                    },
+                    {
+                      "name": "calibration_case",
+                      "expression": "`calibration_case`"
+                    },
+                    {
+                      "name": "is_fallback",
+                      "expression": "`is_fallback`"
+                    },
+                    {
+                      "name": "vol_df1y",
+                      "expression": "`vol_df1y`"
+                    },
+                    {
+                      "name": "vol_df10y",
+                      "expression": "`vol_df10y`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "HW Parameters (Latest)"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "ccy"
+                  },
+                  {
+                    "fieldName": "alpha"
+                  },
+                  {
+                    "fieldName": "sigma"
+                  },
+                  {
+                    "fieldName": "calibration_case"
+                  },
+                  {
+                    "fieldName": "is_fallback"
+                  },
+                  {
+                    "fieldName": "vol_df1y"
+                  },
+                  {
+                    "fieldName": "vol_df10y"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "hw_cases",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hw_cases",
+                  "fields": [
+                    {
+                      "name": "case_label",
+                      "expression": "`case_label`"
+                    },
+                    {
+                      "name": "sum(n)",
+                      "expression": "SUM(`n`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Calibration Case Distribution"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "case_label",
+                  "displayName": "case_label",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(n)",
+                  "displayName": "n",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "case_label",
+                  "displayName": "case_label",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "hw_sigma_ts",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hw_sigma_ts",
+                  "fields": [
+                    {
+                      "name": "ccy",
+                      "expression": "`ccy`"
+                    },
+                    {
+                      "name": "as_of_date",
+                      "expression": "`as_of_date`"
+                    },
+                    {
+                      "name": "sum(sigma)",
+                      "expression": "SUM(`sigma`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "HW σ Over Time"
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "as_of_date",
+                  "displayName": "as_of_date",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(sigma)",
+                  "displayName": "sigma",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "ccy",
+                  "displayName": "ccy",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "hw_header",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Hull-White 1F Calibration\n",
+                "Mean reversion α and short-rate volatility σ from DF vol ratios. Cases 1–7 per methodology."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "exposure",
+      "displayName": "Counterparty Exposure",
+      "layout": [
+        {
+          "widget": {
+            "name": "exp_header",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Counterparty Exposure\n",
+                "Uncollateralised Expected Exposure (EE) and Potential Future Exposure at 95% (PFE95) across simulation time steps, as of 2026-10-22. Values in USD."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "f_cpty",
+            "queries": [
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/01f1d495f3af139fba636f72cae25c55_counterparty_id",
+                "query": {
+                  "datasetName": "counterparty",
+                  "fields": [
+                    {
+                      "name": "counterparty_id",
+                      "expression": "`counterparty_id`"
+                    },
+                    {
+                      "name": "counterparty_id_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Counterparty",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "counterparty_id",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/01f1d495f3af139fba636f72cae25c55_counterparty_id"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "f_rating",
+            "queries": [
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/01f1d495f3af139fba636f72cae25c55_rating",
+                "query": {
+                  "datasetName": "counterparty",
+                  "fields": [
+                    {
+                      "name": "rating",
+                      "expression": "`rating`"
+                    },
+                    {
+                      "name": "rating_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Rating",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "rating",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/01f1d495f3af139fba636f72cae25c55_rating"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "f_sector",
+            "queries": [
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/01f1d495f3af139fba636f72cae25c55_sector",
+                "query": {
+                  "datasetName": "counterparty",
+                  "fields": [
+                    {
+                      "name": "sector",
+                      "expression": "`sector`"
+                    },
+                    {
+                      "name": "sector_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Sector",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "sector",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/01f1d495f3af139fba636f72cae25c55_sector"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 2,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "exp_profile",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Counterparty_Exposure__time_step",
+                      "expression": "`Counterparty_Exposure`.`time_step`"
+                    },
+                    {
+                      "name": "measure(Counterparty_Exposure__ee)",
+                      "expression": "MEASURE(`Counterparty_Exposure`.`ee`)"
+                    },
+                    {
+                      "name": "measure(Counterparty_Exposure__pfe95)",
+                      "expression": "MEASURE(`Counterparty_Exposure`.`pfe95`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`Counterparty_Exposure`.`netting_set_id` IN ('ALL')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "EE and PFE95 Profile"
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "Counterparty_Exposure__time_step",
+                  "displayName": "Time Step",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "measure(Counterparty_Exposure__ee)",
+                      "displayName": "EE"
+                    },
+                    {
+                      "fieldName": "measure(Counterparty_Exposure__pfe95)",
+                      "displayName": "PFE95"
+                    }
+                  ]
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "top_cpty",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Counterparty_Exposure__counterparty_id",
+                      "expression": "`Counterparty_Exposure`.`counterparty_id`"
+                    },
+                    {
+                      "name": "measure(Counterparty_Exposure__peak_pfe95)",
+                      "expression": "MEASURE(`Counterparty_Exposure`.`peak_pfe95`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`Counterparty_Exposure`.`netting_set_id` IN ('ALL')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Top Counterparties by Peak PFE95"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Counterparty_Exposure__counterparty_id",
+                  "displayName": "Counterparty",
+                  "scale": {
+                    "type": "categorical",
+                    "categorySize": {
+                      "type": "number-of-categories",
+                      "number": 15
+                    },
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Counterparty_Exposure__peak_pfe95)",
+                  "displayName": "Peak PFE95",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "ns_breakdown",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Counterparty_Exposure__netting_set_id",
+                      "expression": "`Counterparty_Exposure`.`netting_set_id`"
+                    },
+                    {
+                      "name": "Counterparty_Exposure__counterparty_id",
+                      "expression": "`Counterparty_Exposure`.`counterparty_id`"
+                    },
+                    {
+                      "name": "measure(Counterparty_Exposure__trades)",
+                      "expression": "MEASURE(`Counterparty_Exposure`.`trades`)"
+                    },
+                    {
+                      "name": "measure(Counterparty_Exposure__peak_ee)",
+                      "expression": "MEASURE(`Counterparty_Exposure`.`peak_ee`)"
+                    },
+                    {
+                      "name": "measure(Counterparty_Exposure__peak_pfe95)",
+                      "expression": "MEASURE(`Counterparty_Exposure`.`peak_pfe95`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`Counterparty_Exposure`.`netting_set_id` NOT IN ('ALL')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Exposure by Netting Set"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "Counterparty_Exposure__netting_set_id",
+                    "displayName": "Netting Set"
+                  },
+                  {
+                    "fieldName": "Counterparty_Exposure__counterparty_id",
+                    "displayName": "Counterparty"
+                  },
+                  {
+                    "fieldName": "measure(Counterparty_Exposure__trades)",
+                    "displayName": "Trades"
+                  },
+                  {
+                    "fieldName": "measure(Counterparty_Exposure__peak_ee)",
+                    "displayName": "Peak EE"
+                  },
+                  {
+                    "fieldName": "measure(Counterparty_Exposure__peak_pfe95)",
+                    "displayName": "Peak PFE95"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 9,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "cpty_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Counterparty_Exposure__counterparty_id",
+                      "expression": "`Counterparty_Exposure`.`counterparty_id`"
+                    },
+                    {
+                      "name": "Counterparty__name",
+                      "expression": "`Counterparty`.`name`"
+                    },
+                    {
+                      "name": "Counterparty__rating",
+                      "expression": "`Counterparty`.`rating`"
+                    },
+                    {
+                      "name": "Counterparty__sector",
+                      "expression": "`Counterparty`.`sector`"
+                    },
+                    {
+                      "name": "Counterparty__country",
+                      "expression": "`Counterparty`.`country`"
+                    },
+                    {
+                      "name": "measure(Counterparty_Exposure__trades)",
+                      "expression": "MEASURE(`Counterparty_Exposure`.`trades`)"
+                    },
+                    {
+                      "name": "measure(Counterparty_Exposure__peak_ee)",
+                      "expression": "MEASURE(`Counterparty_Exposure`.`peak_ee`)"
+                    },
+                    {
+                      "name": "measure(Counterparty_Exposure__peak_pfe95)",
+                      "expression": "MEASURE(`Counterparty_Exposure`.`peak_pfe95`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`Counterparty_Exposure`.`netting_set_id` IN ('ALL')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Exposure Summary by Counterparty"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "Counterparty_Exposure__counterparty_id",
+                    "displayName": "Counterparty"
+                  },
+                  {
+                    "fieldName": "Counterparty__name",
+                    "displayName": "Name"
+                  },
+                  {
+                    "fieldName": "Counterparty__rating",
+                    "displayName": "Rating"
+                  },
+                  {
+                    "fieldName": "Counterparty__sector",
+                    "displayName": "Sector"
+                  },
+                  {
+                    "fieldName": "Counterparty__country",
+                    "displayName": "Country"
+                  },
+                  {
+                    "fieldName": "measure(Counterparty_Exposure__trades)",
+                    "displayName": "Trades"
+                  },
+                  {
+                    "fieldName": "measure(Counterparty_Exposure__peak_ee)",
+                    "displayName": "Peak EE"
+                  },
+                  {
+                    "fieldName": "measure(Counterparty_Exposure__peak_pfe95)",
+                    "displayName": "Peak PFE95"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 16,
+            "width": 12,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "var",
+      "displayName": "Book VaR",
+      "layout": [
+        {
+          "widget": {
+            "name": "var_header",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Book VaR\n",
+                "95% Value at Risk and Expected Shortfall by trading book from 1,000 Monte Carlo paths, as of 2026-10-22. Time step 1 = 1-day horizon. Values in USD."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "f_desk",
+            "queries": [
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/01f1d495f5931d8d8bba55ef5ca0a2bf_desk",
+                "query": {
+                  "datasetName": "book",
+                  "fields": [
+                    {
+                      "name": "desk",
+                      "expression": "`desk`"
+                    },
+                    {
+                      "name": "desk_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Desk",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "desk",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/01f1d495f5931d8d8bba55ef5ca0a2bf_desk"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "f_book",
+            "queries": [
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/01f1d495f5931d8d8bba55ef5ca0a2bf_book_id",
+                "query": {
+                  "datasetName": "book",
+                  "fields": [
+                    {
+                      "name": "book_id",
+                      "expression": "`book_id`"
+                    },
+                    {
+                      "name": "book_id_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Book",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "book_id",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/01f1d495f5931d8d8bba55ef5ca0a2bf_book_id"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "k_trades",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "measure(Book_VaR__total_trades)",
+                      "expression": "MEASURE(`Book_VaR`.`total_trades`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Total Trades"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Book_VaR__total_trades)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "k_maxvar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "measure(Book_VaR__max_book_var_1d)",
+                      "expression": "MEASURE(`Book_VaR`.`max_book_var_1d`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Largest Book 1-day VaR95"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Book_VaR__max_book_var_1d)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "k_sumvar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "measure(Book_VaR__var95_1d)",
+                      "expression": "MEASURE(`Book_VaR`.`var95_1d`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Sum of Book 1-day VaR95"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Book_VaR__var95_1d)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 3,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "var_es_bar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Book_VaR__book_id",
+                      "expression": "`Book_VaR`.`book_id`"
+                    },
+                    {
+                      "name": "measure(Book_VaR__var95_1d)",
+                      "expression": "MEASURE(`Book_VaR`.`var95_1d`)"
+                    },
+                    {
+                      "name": "measure(Book_VaR__es95_1d)",
+                      "expression": "MEASURE(`Book_VaR`.`es95_1d`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "DESC",
+                      "expression": "MEASURE(`Book_VaR`.`var95_1d`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "1-day VaR95 and ES95 by Book"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Book_VaR__book_id",
+                  "displayName": "Book",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "measure-reversed",
+                      "measure": {
+                        "fieldName": "measure(Book_VaR__var95_1d)"
+                      }
+                    }
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "measure(Book_VaR__var95_1d)",
+                      "displayName": "VaR95"
+                    },
+                    {
+                      "fieldName": "measure(Book_VaR__es95_1d)",
+                      "displayName": "ES95"
+                    }
+                  ]
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "var_ts",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Book_VaR__time_step",
+                      "expression": "`Book_VaR`.`time_step`"
+                    },
+                    {
+                      "name": "measure(Book_VaR__var95)",
+                      "expression": "MEASURE(`Book_VaR`.`var95`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "VaR95 Across Time Steps"
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "Book_VaR__time_step",
+                  "displayName": "Time Step",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Book_VaR__var95)",
+                  "displayName": "VaR95",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "pv_dist",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Book_VaR__book_id",
+                      "expression": "`Book_VaR`.`book_id`"
+                    },
+                    {
+                      "name": "measure(Book_VaR__p5_pv_1d)",
+                      "expression": "MEASURE(`Book_VaR`.`p5_pv_1d`)"
+                    },
+                    {
+                      "name": "measure(Book_VaR__mean_pv_1d)",
+                      "expression": "MEASURE(`Book_VaR`.`mean_pv_1d`)"
+                    },
+                    {
+                      "name": "measure(Book_VaR__p95_pv_1d)",
+                      "expression": "MEASURE(`Book_VaR`.`p95_pv_1d`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "1-day PV Distribution by Book"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Book_VaR__book_id",
+                  "displayName": "Book",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "measure(Book_VaR__p5_pv_1d)",
+                      "displayName": "P5"
+                    },
+                    {
+                      "fieldName": "measure(Book_VaR__mean_pv_1d)",
+                      "displayName": "Mean"
+                    },
+                    {
+                      "fieldName": "measure(Book_VaR__p95_pv_1d)",
+                      "displayName": "P95"
+                    }
+                  ]
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 11,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "var_detail",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Book_VaR__book_id",
+                      "expression": "`Book_VaR`.`book_id`"
+                    },
+                    {
+                      "name": "Book__desk",
+                      "expression": "`Book`.`desk`"
+                    },
+                    {
+                      "name": "Book__business_unit",
+                      "expression": "`Book`.`business_unit`"
+                    },
+                    {
+                      "name": "measure(Book_VaR__total_trades)",
+                      "expression": "MEASURE(`Book_VaR`.`total_trades`)"
+                    },
+                    {
+                      "name": "measure(Book_VaR__mean_pv_1d)",
+                      "expression": "MEASURE(`Book_VaR`.`mean_pv_1d`)"
+                    },
+                    {
+                      "name": "measure(Book_VaR__var95_1d)",
+                      "expression": "MEASURE(`Book_VaR`.`var95_1d`)"
+                    },
+                    {
+                      "name": "measure(Book_VaR__es95_1d)",
+                      "expression": "MEASURE(`Book_VaR`.`es95_1d`)"
+                    },
+                    {
+                      "name": "measure(Book_VaR__p5_pv_1d)",
+                      "expression": "MEASURE(`Book_VaR`.`p5_pv_1d`)"
+                    },
+                    {
+                      "name": "measure(Book_VaR__p95_pv_1d)",
+                      "expression": "MEASURE(`Book_VaR`.`p95_pv_1d`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "VaR by Book (Detail)"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "Book_VaR__book_id",
+                    "displayName": "Book"
+                  },
+                  {
+                    "fieldName": "Book__desk",
+                    "displayName": "Desk"
+                  },
+                  {
+                    "fieldName": "Book__business_unit",
+                    "displayName": "Business Unit"
+                  },
+                  {
+                    "fieldName": "measure(Book_VaR__total_trades)",
+                    "displayName": "Trades"
+                  },
+                  {
+                    "fieldName": "measure(Book_VaR__mean_pv_1d)",
+                    "displayName": "Mean PV"
+                  },
+                  {
+                    "fieldName": "measure(Book_VaR__var95_1d)",
+                    "displayName": "VaR95"
+                  },
+                  {
+                    "fieldName": "measure(Book_VaR__es95_1d)",
+                    "displayName": "ES95"
+                  },
+                  {
+                    "fieldName": "measure(Book_VaR__p5_pv_1d)",
+                    "displayName": "P5 PV"
+                  },
+                  {
+                    "fieldName": "measure(Book_VaR__p95_pv_1d)",
+                    "displayName": "P95 PV"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 12,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "sensitivities",
+      "displayName": "Sensitivities",
+      "layout": [
+        {
+          "widget": {
+            "name": "sens_header",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Sensitivities\n",
+                "Trade cash greeks and MTM from the daily **risk-sensitivities-daily** job, latest run per as-of date. Drill down business unit > desk > book with the filters or by clicking a bar, then pick a trade to see every sensitivity and the market inputs it was priced with. Units (USD): FX / equity delta = value change per +1% move; gamma = change in that delta per +1%; vega per +1 vol point; IR DV01 = whole curve +1bp; key rate = one curve tenor +1bp."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "f_class",
+            "queries": [
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/7dd8ca27003d4b80b0b06af09314a9ce_risk_class",
+                "query": {
+                  "datasetName": "sens_hierarchy",
+                  "fields": [
+                    {
+                      "name": "risk_class",
+                      "expression": "`risk_class`"
+                    },
+                    {
+                      "name": "risk_class_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/ead14044f114469cabdde9936ffb6176_risk_class",
+                "query": {
+                  "datasetName": "trade_sens",
+                  "fields": [
+                    {
+                      "name": "risk_class",
+                      "expression": "`risk_class`"
+                    },
+                    {
+                      "name": "risk_class_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Risk Class",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "risk_class",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/7dd8ca27003d4b80b0b06af09314a9ce_risk_class"
+                  },
+                  {
+                    "fieldName": "risk_class",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/ead14044f114469cabdde9936ffb6176_risk_class"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "f_factor",
+            "queries": [
+              {
+                "name": "_Sensitivity_Hierarchy__risk_factor",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Sensitivity_Hierarchy__risk_factor",
+                      "expression": "`Sensitivity_Hierarchy`.`risk_factor`"
+                    },
+                    {
+                      "name": "Sensitivity_Hierarchy__risk_factor_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "_Trade_Sensitivities__risk_factor",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Trade_Sensitivities__risk_factor",
+                      "expression": "`Trade_Sensitivities`.`risk_factor`"
+                    },
+                    {
+                      "name": "Trade_Sensitivities__risk_factor_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Risk Factor"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "Sensitivity_Hierarchy__risk_factor",
+                    "queryName": "_Sensitivity_Hierarchy__risk_factor"
+                  },
+                  {
+                    "fieldName": "Trade_Sensitivities__risk_factor",
+                    "queryName": "_Trade_Sensitivities__risk_factor"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "f_bu",
+            "queries": [
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/7dd8ca27003d4b80b0b06af09314a9ce_business_unit",
+                "query": {
+                  "datasetName": "sens_hierarchy",
+                  "fields": [
+                    {
+                      "name": "business_unit",
+                      "expression": "`business_unit`"
+                    },
+                    {
+                      "name": "business_unit_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/ead14044f114469cabdde9936ffb6176_business_unit",
+                "query": {
+                  "datasetName": "trade_sens",
+                  "fields": [
+                    {
+                      "name": "business_unit",
+                      "expression": "`business_unit`"
+                    },
+                    {
+                      "name": "business_unit_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Business Unit",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "business_unit",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/7dd8ca27003d4b80b0b06af09314a9ce_business_unit"
+                  },
+                  {
+                    "fieldName": "business_unit",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/ead14044f114469cabdde9936ffb6176_business_unit"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "f_desk",
+            "queries": [
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/7dd8ca27003d4b80b0b06af09314a9ce_desk_path",
+                "query": {
+                  "datasetName": "sens_hierarchy",
+                  "fields": [
+                    {
+                      "name": "desk_path",
+                      "expression": "`desk_path`"
+                    },
+                    {
+                      "name": "desk_path_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/ead14044f114469cabdde9936ffb6176_desk_path",
+                "query": {
+                  "datasetName": "trade_sens",
+                  "fields": [
+                    {
+                      "name": "desk_path",
+                      "expression": "`desk_path`"
+                    },
+                    {
+                      "name": "desk_path_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Desk",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "desk_path",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/7dd8ca27003d4b80b0b06af09314a9ce_desk_path"
+                  },
+                  {
+                    "fieldName": "desk_path",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/ead14044f114469cabdde9936ffb6176_desk_path"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 10,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "f_book",
+            "queries": [
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/7dd8ca27003d4b80b0b06af09314a9ce_book_id",
+                "query": {
+                  "datasetName": "sens_hierarchy",
+                  "fields": [
+                    {
+                      "name": "book_id",
+                      "expression": "`book_id`"
+                    },
+                    {
+                      "name": "book_id_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/ead14044f114469cabdde9936ffb6176_book_id",
+                "query": {
+                  "datasetName": "trade_sens",
+                  "fields": [
+                    {
+                      "name": "book_id",
+                      "expression": "`book_id`"
+                    },
+                    {
+                      "name": "book_id_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/6601f71da91a405da276c31b344b894e_book_id",
+                "query": {
+                  "datasetName": "trade_inputs",
+                  "fields": [
+                    {
+                      "name": "book_id",
+                      "expression": "`book_id`"
+                    },
+                    {
+                      "name": "book_id_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Book",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "book_id",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/7dd8ca27003d4b80b0b06af09314a9ce_book_id"
+                  },
+                  {
+                    "fieldName": "book_id",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/ead14044f114469cabdde9936ffb6176_book_id"
+                  },
+                  {
+                    "fieldName": "book_id",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/6601f71da91a405da276c31b344b894e_book_id"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "f_trade",
+            "queries": [
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/ead14044f114469cabdde9936ffb6176_trade_id",
+                "query": {
+                  "datasetName": "trade_sens",
+                  "fields": [
+                    {
+                      "name": "trade_id",
+                      "expression": "`trade_id`"
+                    },
+                    {
+                      "name": "trade_id_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/6601f71da91a405da276c31b344b894e_trade_id",
+                "query": {
+                  "datasetName": "trade_inputs",
+                  "fields": [
+                    {
+                      "name": "trade_id",
+                      "expression": "`trade_id`"
+                    },
+                    {
+                      "name": "trade_id_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Trade",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "trade_id",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/ead14044f114469cabdde9936ffb6176_trade_id"
+                  },
+                  {
+                    "fieldName": "trade_id",
+                    "queryName": "dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/6601f71da91a405da276c31b344b894e_trade_id"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "c_mtm",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "measure(Sensitivity_Hierarchy__mtm)",
+                      "expression": "MEASURE(`Sensitivity_Hierarchy`.`mtm`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Total MTM"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Sensitivity_Hierarchy__mtm)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            },
+            "filterSources": {
+              "mode": "EXCLUDE",
+              "page": {
+                "names": [
+                  "f_class",
+                  "f_factor"
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "c_measure",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "measure(Sensitivity_Hierarchy__value)",
+                      "expression": "MEASURE(`Sensitivity_Hierarchy`.`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Total {{ filter:f_measure }}",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Sensitivity_Hierarchy__value)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 3,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "sens_note",
+            "multilineTextboxSpec": {
+              "lines": [
+                "Desks are shown as *business unit / desk* because the same desk name exists in more than one business unit. Pick a book before browsing trades."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_bu",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Sensitivity_Hierarchy__business_unit",
+                      "expression": "`Sensitivity_Hierarchy`.`business_unit`"
+                    },
+                    {
+                      "name": "measure(Sensitivity_Hierarchy__value)",
+                      "expression": "MEASURE(`Sensitivity_Hierarchy`.`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "{{ filter:f_measure }} by business unit",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Sensitivity_Hierarchy__business_unit",
+                  "displayName": "Business Unit",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Sensitivity_Hierarchy__value)",
+                  "displayName": "Value (USD)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 4,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_desk",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Sensitivity_Hierarchy__desk_path",
+                      "expression": "`Sensitivity_Hierarchy`.`desk_path`"
+                    },
+                    {
+                      "name": "measure(Sensitivity_Hierarchy__value)",
+                      "expression": "MEASURE(`Sensitivity_Hierarchy`.`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "{{ filter:f_measure }} by desk",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Sensitivity_Hierarchy__desk_path",
+                  "displayName": "Desk",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Sensitivity_Hierarchy__value)",
+                  "displayName": "Value (USD)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 5,
+            "width": 4,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_book",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Sensitivity_Hierarchy__book_id",
+                      "expression": "`Sensitivity_Hierarchy`.`book_id`"
+                    },
+                    {
+                      "name": "measure(Sensitivity_Hierarchy__value)",
+                      "expression": "MEASURE(`Sensitivity_Hierarchy`.`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "{{ filter:f_measure }} by book",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Sensitivity_Hierarchy__book_id",
+                  "displayName": "Book",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Sensitivity_Hierarchy__value)",
+                  "displayName": "Value (USD)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 5,
+            "width": 4,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "krd_ladder",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Sensitivity_Hierarchy__risk_factor",
+                      "expression": "`Sensitivity_Hierarchy`.`risk_factor`"
+                    },
+                    {
+                      "name": "Sensitivity_Hierarchy__tenor_label",
+                      "expression": "`Sensitivity_Hierarchy`.`tenor_label`"
+                    },
+                    {
+                      "name": "measure(Sensitivity_Hierarchy__krd)",
+                      "expression": "MEASURE(`Sensitivity_Hierarchy`.`krd`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`Sensitivity_Hierarchy`.`measure` IN ('IR_KRD')"
+                    },
+                    {
+                      "expression": "`Sensitivity_Hierarchy`.`risk_factor` NOT IN ('ALL')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Key-Rate Ladder",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Sensitivity_Hierarchy__tenor_label",
+                  "displayName": "Tenor",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "1M",
+                        "3M",
+                        "6M",
+                        "1Y",
+                        "2Y",
+                        "3Y",
+                        "5Y",
+                        "7Y",
+                        "10Y",
+                        "15Y",
+                        "20Y",
+                        "30Y"
+                      ]
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Sensitivity_Hierarchy__krd)",
+                  "displayName": "Key rate (USD)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "Sensitivity_Hierarchy__risk_factor",
+                  "displayName": "Curve",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 5,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "trade_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Trade_Sensitivities__trade_id",
+                      "expression": "`Trade_Sensitivities`.`trade_id`"
+                    },
+                    {
+                      "name": "Trade_Sensitivities__product",
+                      "expression": "`Trade_Sensitivities`.`product`"
+                    },
+                    {
+                      "name": "Trade_Sensitivities__book_id",
+                      "expression": "`Trade_Sensitivities`.`book_id`"
+                    },
+                    {
+                      "name": "Trade_Sensitivities__counterparty_id",
+                      "expression": "`Trade_Sensitivities`.`counterparty_id`"
+                    },
+                    {
+                      "name": "Trade_Sensitivities__ccy",
+                      "expression": "`Trade_Sensitivities`.`ccy`"
+                    },
+                    {
+                      "name": "Trade_Sensitivities__underlying",
+                      "expression": "`Trade_Sensitivities`.`underlying`"
+                    },
+                    {
+                      "name": "Trade_Sensitivities__maturity_date",
+                      "expression": "`Trade_Sensitivities`.`maturity_date`"
+                    },
+                    {
+                      "name": "Trade_Sensitivities__notional",
+                      "expression": "`Trade_Sensitivities`.`notional`"
+                    },
+                    {
+                      "name": "Trade_Sensitivities__mtm_usd",
+                      "expression": "`Trade_Sensitivities`.`mtm_usd`"
+                    },
+                    {
+                      "name": "measure(Trade_Sensitivities__value)",
+                      "expression": "MEASURE(`Trade_Sensitivities`.`value`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Trades: {{ filter:f_measure }} (pick a book first)",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "Trade_Sensitivities__trade_id",
+                    "useForSearch": true,
+                    "displayName": "Trade"
+                  },
+                  {
+                    "fieldName": "Trade_Sensitivities__product",
+                    "displayName": "Product"
+                  },
+                  {
+                    "fieldName": "Trade_Sensitivities__book_id",
+                    "displayName": "Book"
+                  },
+                  {
+                    "fieldName": "Trade_Sensitivities__counterparty_id",
+                    "displayName": "Counterparty"
+                  },
+                  {
+                    "fieldName": "Trade_Sensitivities__ccy",
+                    "displayName": "Ccy"
+                  },
+                  {
+                    "fieldName": "Trade_Sensitivities__underlying",
+                    "displayName": "Underlying"
+                  },
+                  {
+                    "fieldName": "Trade_Sensitivities__maturity_date",
+                    "displayName": "Maturity"
+                  },
+                  {
+                    "fieldName": "Trade_Sensitivities__notional",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    },
+                    "displayName": "Notional"
+                  },
+                  {
+                    "fieldName": "Trade_Sensitivities__mtm_usd",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    },
+                    "displayName": "MTM (USD)"
+                  },
+                  {
+                    "fieldName": "measure(Trade_Sensitivities__value)",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 2
+                      }
+                    },
+                    "displayName": "Selected measure (USD)"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 5,
+            "y": 11,
+            "width": 7,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "trade_sens_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Trade_Sensitivities__trade_id",
+                      "expression": "`Trade_Sensitivities`.`trade_id`"
+                    },
+                    {
+                      "name": "Trade_Sensitivities__sensitivity_type",
+                      "expression": "`Trade_Sensitivities`.`sensitivity_type`"
+                    },
+                    {
+                      "name": "Trade_Sensitivities__risk_factor",
+                      "expression": "`Trade_Sensitivities`.`risk_factor`"
+                    },
+                    {
+                      "name": "Trade_Sensitivities__tenor_label",
+                      "expression": "`Trade_Sensitivities`.`tenor_label`"
+                    },
+                    {
+                      "name": "measure(Trade_Sensitivities__value_all)",
+                      "expression": "MEASURE(`Trade_Sensitivities`.`value_all`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Trade Sensitivities",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "Trade_Sensitivities__trade_id",
+                    "displayName": "Trade"
+                  },
+                  {
+                    "fieldName": "Trade_Sensitivities__sensitivity_type",
+                    "displayName": "Sensitivity"
+                  },
+                  {
+                    "fieldName": "Trade_Sensitivities__risk_factor",
+                    "displayName": "Risk Factor"
+                  },
+                  {
+                    "fieldName": "Trade_Sensitivities__tenor_label",
+                    "displayName": "Tenor"
+                  },
+                  {
+                    "fieldName": "measure(Trade_Sensitivities__value_all)",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "USD",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 2
+                      }
+                    },
+                    "displayName": "Value (USD)"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            },
+            "filterSources": {
+              "mode": "EXCLUDE",
+              "page": {
+                "names": [
+                  "f_class",
+                  "f_factor"
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 5,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "inputs_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Trade_Market_Inputs__trade_id",
+                      "expression": "`Trade_Market_Inputs`.`trade_id`"
+                    },
+                    {
+                      "name": "Trade_Market_Inputs__risk_factor",
+                      "expression": "`Trade_Market_Inputs`.`risk_factor`"
+                    },
+                    {
+                      "name": "Trade_Market_Inputs__input_type",
+                      "expression": "`Trade_Market_Inputs`.`input_type`"
+                    },
+                    {
+                      "name": "Trade_Market_Inputs__tenor_label",
+                      "expression": "`Trade_Market_Inputs`.`tenor_label`"
+                    },
+                    {
+                      "name": "Trade_Market_Inputs__tenor_years",
+                      "expression": "`Trade_Market_Inputs`.`tenor_years`"
+                    },
+                    {
+                      "name": "Trade_Market_Inputs__value",
+                      "expression": "`Trade_Market_Inputs`.`value`"
+                    },
+                    {
+                      "name": "Trade_Market_Inputs__description",
+                      "expression": "`Trade_Market_Inputs`.`description`"
+                    }
+                  ],
+                  "disaggregated": true,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`Trade_Market_Inputs`.`risk_factor`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`Trade_Market_Inputs`.`input_type`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`Trade_Market_Inputs`.`tenor_years`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Market Inputs"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "Trade_Market_Inputs__trade_id",
+                    "displayName": "Trade"
+                  },
+                  {
+                    "fieldName": "Trade_Market_Inputs__risk_factor",
+                    "displayName": "Risk Factor"
+                  },
+                  {
+                    "fieldName": "Trade_Market_Inputs__input_type",
+                    "displayName": "Input"
+                  },
+                  {
+                    "fieldName": "Trade_Market_Inputs__tenor_label",
+                    "displayName": "Tenor"
+                  },
+                  {
+                    "fieldName": "Trade_Market_Inputs__tenor_years",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "type": "max",
+                        "places": 3
+                      }
+                    },
+                    "displayName": "Years"
+                  },
+                  {
+                    "fieldName": "Trade_Market_Inputs__value",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "significantFigures": {
+                        "type": "max",
+                        "figures": 6
+                      }
+                    },
+                    "displayName": "Value"
+                  },
+                  {
+                    "fieldName": "Trade_Market_Inputs__description",
+                    "displayName": "Description"
+                  }
+                ],
+                "rowOrder": [
+                  {
+                    "by": "column",
+                    "field": {
+                      "index": 1
+                    }
+                  },
+                  {
+                    "by": "column",
+                    "field": {
+                      "index": 2
+                    }
+                  },
+                  {
+                    "by": "column",
+                    "field": {
+                      "index": 4
+                    }
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 5,
+            "y": 18,
+            "width": 7,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "hist_mtm",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Risk_Run_History__as_of_date",
+                      "expression": "`Risk_Run_History`.`as_of_date`"
+                    },
+                    {
+                      "name": "measure(Risk_Run_History__total_mtm)",
+                      "expression": "MEASURE(`Risk_Run_History`.`total_mtm`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "MTM History"
+              },
+              "version": 3,
+              "mark": {
+                "marker": {
+                  "shape": "circle"
+                }
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "Risk_Run_History__as_of_date",
+                  "displayName": "As-of Date",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Risk_Run_History__total_mtm)",
+                  "displayName": "Total MTM (USD)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 25,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "hist_var",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Risk_Run_History__as_of_date",
+                      "expression": "`Risk_Run_History`.`as_of_date`"
+                    },
+                    {
+                      "name": "measure(Risk_Run_History__var95_1d)",
+                      "expression": "MEASURE(`Risk_Run_History`.`var95_1d`)"
+                    },
+                    {
+                      "name": "measure(Risk_Run_History__es95_1d)",
+                      "expression": "MEASURE(`Risk_Run_History`.`es95_1d`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "VaR History"
+              },
+              "version": 3,
+              "mark": {
+                "marker": {
+                  "shape": "circle"
+                }
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "Risk_Run_History__as_of_date",
+                  "displayName": "As-of Date",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "measure(Risk_Run_History__var95_1d)",
+                      "displayName": "VaR95"
+                    },
+                    {
+                      "fieldName": "measure(Risk_Run_History__es95_1d)",
+                      "displayName": "ES95"
+                    }
+                  ]
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 25,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "f_asof",
+            "queries": [
+              {
+                "name": "_Risk_Run_History__as_of_date",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Risk_Run_History__as_of_date",
+                      "expression": "`Risk_Run_History`.`as_of_date`"
+                    },
+                    {
+                      "name": "Risk_Run_History__as_of_date_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/7dd8ca27003d4b80b0b06af09314a9ce_as_of_sel",
+                "query": {
+                  "datasetName": "sens_hierarchy",
+                  "parameters": [
+                    {
+                      "name": "as_of_sel",
+                      "keyword": "as_of_sel"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/ead14044f114469cabdde9936ffb6176_as_of_sel",
+                "query": {
+                  "datasetName": "trade_sens",
+                  "parameters": [
+                    {
+                      "name": "as_of_sel",
+                      "keyword": "as_of_sel"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/6601f71da91a405da276c31b344b894e_as_of_sel",
+                "query": {
+                  "datasetName": "trade_inputs",
+                  "parameters": [
+                    {
+                      "name": "as_of_sel",
+                      "keyword": "as_of_sel"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "As-of"
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "Risk_Run_History__as_of_date",
+                    "queryName": "_Risk_Run_History__as_of_date"
+                  },
+                  {
+                    "parameterName": "as_of_sel",
+                    "queryName": "parameter_dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/7dd8ca27003d4b80b0b06af09314a9ce_as_of_sel"
+                  },
+                  {
+                    "parameterName": "as_of_sel",
+                    "queryName": "parameter_dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/ead14044f114469cabdde9936ffb6176_as_of_sel"
+                  },
+                  {
+                    "parameterName": "as_of_sel",
+                    "queryName": "parameter_dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/6601f71da91a405da276c31b344b894e_as_of_sel"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "f_measure",
+            "queries": [
+              {
+                "name": "_Sensitivity_Hierarchy__measure",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Sensitivity_Hierarchy__measure",
+                      "expression": "`Sensitivity_Hierarchy`.`measure`"
+                    },
+                    {
+                      "name": "Sensitivity_Hierarchy__measure_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/7dd8ca27003d4b80b0b06af09314a9ce_measure_sel",
+                "query": {
+                  "datasetName": "sens_hierarchy",
+                  "parameters": [
+                    {
+                      "name": "measure_sel",
+                      "keyword": "measure_sel"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/ead14044f114469cabdde9936ffb6176_measure_sel",
+                "query": {
+                  "datasetName": "trade_sens",
+                  "parameters": [
+                    {
+                      "name": "measure_sel",
+                      "keyword": "measure_sel"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "disallowAll": true,
+              "frame": {
+                "showTitle": true,
+                "title": "Measure"
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "Sensitivity_Hierarchy__measure",
+                    "queryName": "_Sensitivity_Hierarchy__measure"
+                  },
+                  {
+                    "parameterName": "measure_sel",
+                    "queryName": "parameter_dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/7dd8ca27003d4b80b0b06af09314a9ce_measure_sel"
+                  },
+                  {
+                    "parameterName": "measure_sel",
+                    "queryName": "parameter_dashboards/01f1cdecf19b17968c2a64df6e46cc64/datasets/ead14044f114469cabdde9936ffb6176_measure_sel"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
