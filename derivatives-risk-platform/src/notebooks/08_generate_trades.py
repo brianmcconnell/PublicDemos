@@ -1,4 +1,3 @@
-# Databricks notebook source
 """08_generate_trades: create synthetic trades, reference data, and write to silver + dimensions.
 
 Generates 52k trades per product (IRS, XCCY, FRA, FX fwd, Euro opt, Amer opt) with 100 defects

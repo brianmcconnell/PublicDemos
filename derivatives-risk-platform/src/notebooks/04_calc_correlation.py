@@ -1,4 +1,3 @@
-# Databricks notebook source
 """04_calc_correlation: compute factor correlation matrix -> gold_corr_matrix.
 
 Reads factor levels from vol notebook output (or rebuilds from bronze),

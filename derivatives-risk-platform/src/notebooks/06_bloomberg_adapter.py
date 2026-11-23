@@ -1,4 +1,3 @@
-# Databricks notebook source
 """06_bloomberg_adapter: synthetic Bloomberg bond/credit data (no real Bloomberg data is used).
 
 Generates a static set of synthetic government and corporate bonds, credit spreads and bond

@@ -1,4 +1,3 @@
-# Databricks notebook source
 """00_setup: create schema, tables, volumes and dimension tables.
 
 Idempotent — safe to rerun. Uses CREATE TABLE IF NOT EXISTS throughout.

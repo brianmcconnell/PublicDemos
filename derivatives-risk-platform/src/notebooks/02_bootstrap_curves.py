@@ -1,5 +1,4 @@
-# Databricks notebook source
-%pip install QuantLib -q
+# QuantLib comes from the job environment (resources/jobs/*.yml)
 
 # COMMAND ----------
 """02_bootstrap_curves: build zero curves for today from bronze_fred_rates and write gold_zero_curves.

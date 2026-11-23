@@ -1,4 +1,3 @@
-# Databricks notebook source
 """02b_backfill_analytics: build historic curves, vols and correlation from backfilled data.
 
 Runs 02_bootstrap_curves logic for every unique FRED curve date, then 03/04 for weekly calc dates.

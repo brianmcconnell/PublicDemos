@@ -1,4 +1,3 @@
-# Databricks notebook source
 """14_calc_var: finalize book-level VaR from exposure partials -> gold_book_var.
 
 Reads BOOK partial rows (from _book_parts temp view or gold_cpty_exposure),

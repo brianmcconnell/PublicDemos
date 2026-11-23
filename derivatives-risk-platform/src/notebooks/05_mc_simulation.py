@@ -1,4 +1,3 @@
-# Databricks notebook source
 """05_mc_simulation: run Monte Carlo simulation and save the cube to a UC volume.
 
 Reads gold_zero_curves, gold_hist_vol, gold_corr_matrix, gold_hw_params (or calibrates on the fly),

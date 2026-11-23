@@ -1,4 +1,3 @@
-# Databricks notebook source
 """01_ingest_fred: fetch FRED series and upsert to bronze_fred_rates.
 
 Incremental: reads the watermark, fetches only new dates, MERGE INTO to avoid duplicates.

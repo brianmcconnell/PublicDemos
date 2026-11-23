@@ -1,4 +1,3 @@
-# Databricks notebook source
 """01c_validate_backfill: coverage, gap and spot-value checks on backfilled market data."""
 import sys, os, datetime as dt
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath("__file__")), ".."))

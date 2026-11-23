@@ -1,4 +1,3 @@
-# Databricks notebook source
 """01_ingest_yfinance: fetch equity and FX prices from Yahoo Finance.
 
 Incremental from watermark. Handles GBp -> GBP conversion for London-listed stocks.

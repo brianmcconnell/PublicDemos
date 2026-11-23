@@ -1,4 +1,3 @@
-# Databricks notebook source
 """03_calc_hist_vol: compute historical volatility for IR, FX and EQ factors -> gold_hist_vol.
 
 Reads gold_zero_curves (as discount factors), bronze_fx_rates, bronze_equity_prices.

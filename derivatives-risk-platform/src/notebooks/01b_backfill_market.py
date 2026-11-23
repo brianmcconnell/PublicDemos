@@ -1,4 +1,3 @@
-# Databricks notebook source
 """01b_backfill_market: chunked historic backfill of FRED + yfinance data.
 
 Default 10Y window (min 2Y), 12-month chunks. Each chunk is logged to ctl_backfill_log;

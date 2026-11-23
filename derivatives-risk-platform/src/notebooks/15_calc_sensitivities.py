@@ -1,4 +1,3 @@
-# Databricks notebook source
 """15_calc_sensitivities: daily trade MTM and greeks, rolled up the book hierarchy, with run history.
 
 Prices every clean trade at the valuation date of the latest simulation cube with bump-and-reprice

@@ -1,4 +1,3 @@
-# Databricks notebook source
 """99_collect_evidence: stitch individual stage evidence files into evidence/README.md.
 
 Also copies the evidence folder to the UC volume for external access.

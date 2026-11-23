@@ -1,4 +1,3 @@
-# Databricks notebook source
 """06_build_app_reference: reference / picker tables for the risk-curves-app.
 
 Builds small Delta tables (Change Data Feed on) in the market schema that are synced to the

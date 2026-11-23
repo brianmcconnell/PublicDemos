@@ -1,4 +1,3 @@
-# Databricks notebook source
 """09_trade_lifecycle: daily trade lifecycle -> silver_trades_*, trade_lifecycle_events, gold_rate_fixings.
 
 For every trading day (a gold_zero_curves date) after the 'trade_lifecycle' watermark, up to end_date:

@@ -1,4 +1,3 @@
-# Databricks notebook source
 """10_dqx_monitors: data quality checks on trades, market data and simulation.
 
 Checks:

@@ -1,4 +1,3 @@
-# Databricks notebook source
 """13_calc_exposure: price all trades on the SimCube -> counterparty exposure (EE / PFE95) + book VaR.
 
 Distributed flow:
