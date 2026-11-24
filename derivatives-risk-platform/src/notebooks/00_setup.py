@@ -20,7 +20,7 @@ print(f"Schema {cfg.catalog}.{cfg.schema} ready")
 
 # COMMAND ----------
 # Volumes for trade files and simulation cubes
-for vol_name in ["trade_files", "sim_cubes", "evidence"]:
+for vol_name in ["trade_files", "sim_cubes", "evidence", "isda_feed"]:
     spark.sql(f"CREATE VOLUME IF NOT EXISTS {cfg.catalog}.{cfg.schema}.{vol_name}")
     print(f"Volume {cfg.catalog}.{cfg.schema}.{vol_name} ready")
 
@@ -176,6 +176,15 @@ for ddl in [
         as_of_date DATE, trade_id STRING, product STRING, counterparty_id STRING,
         time_step INT, path_id INT, pv DOUBLE)
     USING DELTA PARTITIONED BY (as_of_date)""",
+    # --- VaR ML forecast tables ---
+    f"""CREATE TABLE IF NOT EXISTS {cfg.t('gold_var_forecast')} (
+        forecast_date DATE, book_id STRING, horizon_days INT, as_of_date DATE,
+        var_95_forecast DOUBLE, model_version INT, run_id STRING, created_ts TIMESTAMP)
+    USING DELTA PARTITIONED BY (forecast_date)""",
+    f"""CREATE TABLE IF NOT EXISTS {cfg.t('gold_var_forecast_monitor')} (
+        check_ts TIMESTAMP, model_version INT, baseline_smape DOUBLE,
+        current_smape DOUBLE, degraded BOOLEAN, retrained BOOLEAN, notes STRING)
+    USING DELTA""",
 ]:
     spark.sql(ddl)
 print("Gold tables ready")
@@ -200,6 +209,25 @@ for ddl in [
 ]:
     spark.sql(ddl)
 print("Dimension tables ready")
+
+# COMMAND ----------
+# Seed the isda_feed volume with the bundled sample data files (idempotent)
+import shutil, os as _os
+SEED_SRC = _os.path.join(_os.path.dirname(_os.path.abspath("__file__")), "..", "data", "isda_netting")
+isda_vol  = f"/Volumes/{cfg.catalog}/{cfg.schema}/isda_feed"
+for sub in ["historic", "incremental"]:
+    src_dir = f"{SEED_SRC}/{sub}"
+    dst_dir = f"{isda_vol}/{sub}"
+    if _os.path.isdir(src_dir):
+        _os.makedirs(dst_dir, exist_ok=True)
+        for fn in _os.listdir(src_dir):
+            dst_file = f"{dst_dir}/{fn}"
+            if not _os.path.exists(dst_file):
+                shutil.copy2(f"{src_dir}/{fn}", dst_file)
+                print(f"Seeded {dst_file}")
+            else:
+                print(f"Exists (skip): {dst_file}")
+print("isda_feed volume seeded")
 
 # COMMAND ----------
 # Control tables

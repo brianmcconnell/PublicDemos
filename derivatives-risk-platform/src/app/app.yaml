@@ -10,3 +10,11 @@ env:
     value: brian.mcconnell@databricks.com
   - name: STREAMLIT_BROWSER_GATHER_USAGE_STATS
     value: "false"
+  # Warehouse used by the VaR Forecast tab to query gold_book_var / gold_var_forecast
+  - name: FORECAST_WH_ID
+    value: 00b68b68ca99ca59
+  # Catalog / schema for lakehouse tables queried by the forecast tab
+  - name: DATABRICKS_CATALOG
+    value: serverless_stable_7s0j2u_catalog
+  - name: DATABRICKS_SCHEMA
+    value: market

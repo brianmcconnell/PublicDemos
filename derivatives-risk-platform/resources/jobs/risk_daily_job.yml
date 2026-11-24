@@ -82,6 +82,13 @@ resources:
             python_file: ../../src/jobs/refresh_lakebase_sync.py
             parameters: ["--catalog", "${var.catalog}"]
           environment_key: default
+        # --- ISDA netting feed: refresh gold_netting_agreements before the trade/exposure chain ---
+        # Runs the isda_netting Lakeflow pipeline (Auto Loader JSON -> silver_isda_netting -> gold_netting_agreements).
+        # 13_calc_exposure validates trade netting keys against this table; it falls back gracefully if unavailable.
+        - task_key: refresh_isda_netting
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.isda_netting.id}
+            full_refresh: false
         # --- trades (parallel with analytics) ---
         - task_key: bloomberg_adapter
           spark_python_task:
@@ -94,6 +101,7 @@ resources:
           depends_on:
             - task_key: bloomberg_adapter
             - task_key: bootstrap_curves
+            - task_key: refresh_isda_netting
           spark_python_task:
             python_file: ../../src/jobs/run_step.py
             parameters: ["--step", "09_trade_lifecycle.py", "--param", "catalog=${var.catalog}", "--param", "schema=${var.schema}",

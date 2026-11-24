@@ -122,8 +122,8 @@ except Exception as e:  # surface connection / permission problems clearly
 ACTIVE = TEN[TEN.is_active].reset_index(drop=True)
 ccy_label = {r.ccy: f"{r.ccy} - {r.ccy_name}" for r in CUR.itertuples()}
 
-tab_hist, tab_cmp, tab_spr, tab_sim, tab_ten, tab_wi = st.tabs(
-    ["Historical curves", "Compare curves", "Currency spreads", "Simulated rates", "Tenors", "Trade what-if"])
+tab_hist, tab_cmp, tab_spr, tab_sim, tab_ten, tab_wi, tab_forecast = st.tabs(
+    ["Historical curves", "Compare curves", "Currency spreads", "Simulated rates", "Tenors", "Trade what-if", "VaR Forecast"])
 
 # ---------------------------------------------------------------------------
 # R1. Historical curves
@@ -549,3 +549,140 @@ with tab_wi:
         st.error(f"The what-if tab could not load: {e}")
     else:
         whatif_tab.render(USER)
+
+# ---------------------------------------------------------------------------
+# R5. VaR Forecast: compare Monte Carlo VaR vs ML 10-day ahead forecast
+# ---------------------------------------------------------------------------
+CATALOG = os.environ.get("DATABRICKS_CATALOG", "serverless_stable_7s0j2u_catalog")
+SCHEMA  = os.environ.get("DATABRICKS_SCHEMA",  "market")
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_forecast_data() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load latest MC VaR actuals and ML forecast via SQL warehouse."""
+    try:
+        import wh
+        # Latest available MC VaR (all books + each book, last 60 days)
+        mc_df = wh.wh_query(f"""
+            SELECT as_of_date, book_id, var_95, expected_shortfall_95
+            FROM {CATALOG}.{SCHEMA}.gold_book_var
+            WHERE as_of_date >= date_sub(current_date(), 90)
+            ORDER BY book_id, as_of_date
+        """)
+        # Latest forecast batch (most recent forecast_date)
+        fc_df = wh.wh_query(f"""
+            SELECT as_of_date, book_id, horizon_days, var_95_forecast, model_version
+            FROM {CATALOG}.{SCHEMA}.gold_var_forecast
+            WHERE forecast_date = (SELECT max(forecast_date) FROM {CATALOG}.{SCHEMA}.gold_var_forecast)
+            ORDER BY book_id, as_of_date
+        """)
+        mc_df["as_of_date"] = pd.to_datetime(mc_df["as_of_date"])
+        fc_df["as_of_date"] = pd.to_datetime(fc_df["as_of_date"])
+        for col in ["var_95", "expected_shortfall_95"]:
+            if col in mc_df:
+                mc_df[col] = pd.to_numeric(mc_df[col], errors="coerce")
+        fc_df["var_95_forecast"] = pd.to_numeric(fc_df["var_95_forecast"], errors="coerce")
+        return mc_df, fc_df
+    except Exception as e:
+        return pd.DataFrame(), pd.DataFrame()
+
+
+with tab_forecast:
+    st.caption(
+        "Compares the 95% 1-day VaR from the Monte Carlo simulation (actual, computed by notebook 13) "
+        "with the 10-business-day ML forecast (GBR model trained by notebook 16, monitored weekly by notebook 17). "
+        "The forecast is regenerated each Monday morning."
+    )
+    try:
+        mc_raw, fc_raw = load_forecast_data()
+    except Exception as _e:
+        st.error(f"Could not load forecast data: {_e}")
+        st.stop()
+
+    if mc_raw.empty and fc_raw.empty:
+        st.info(
+            "No VaR forecast data found. Run notebook 16_var_forecast_automl to train the model and generate "
+            "the first forecast, then refresh this page."
+        )
+    else:
+        # Book / TOTAL selector
+        all_books = sorted(mc_raw["book_id"].unique().tolist()) if not mc_raw.empty else []
+        # Compute TOTAL if not already in the table
+        if "TOTAL" not in all_books and not mc_raw.empty:
+            total_mc = (
+                mc_raw.groupby("as_of_date")[["var_95", "expected_shortfall_95"]]
+                .sum().reset_index().assign(book_id="TOTAL")
+            )
+            mc_all = pd.concat([mc_raw, total_mc], ignore_index=True)
+        else:
+            mc_all = mc_raw
+        book_opts = ["TOTAL"] + [b for b in all_books if b != "TOTAL"]
+        sel_book = st.selectbox("Book", book_opts, key="fc_book")
+
+        mc_book = mc_all[mc_all["book_id"] == sel_book].sort_values("as_of_date")
+        fc_book = fc_raw[fc_raw["book_id"] == sel_book].sort_values("as_of_date") if not fc_raw.empty else pd.DataFrame()
+
+        # Key metrics row
+        m1, m2, m3, m4 = st.columns(4)
+        if not mc_book.empty:
+            latest_mc = float(mc_book.iloc[-1]["var_95"])
+            m1.metric("Latest MC VaR (95%, 1-day)", f"${latest_mc:,.0f}")
+        if not fc_book.empty:
+            nearest = fc_book.iloc[0]
+            m2.metric("ML Forecast (next 1 bday)",   f"${float(nearest['var_95_forecast']):,.0f}")
+            furthest = fc_book.iloc[-1]
+            m3.metric("ML Forecast (next 10 bdays)",  f"${float(furthest['var_95_forecast']):,.0f}")
+            if not mc_book.empty:
+                bias = float(nearest["var_95_forecast"]) - float(mc_book.iloc[-1]["var_95"])
+                m4.metric("Model vs Latest MC", f"${bias:+,.0f}",
+                          delta_color="normal" if abs(bias) / max(latest_mc, 1) < 0.15 else "inverse")
+
+        # Combined chart: MC actuals + ML forecast
+        fig = go.Figure()
+        if not mc_book.empty:
+            fig.add_trace(go.Scatter(
+                x=mc_book["as_of_date"], y=mc_book["var_95"],
+                mode="lines", name="MC VaR (actual)",
+                line=dict(color="#2375A8", width=2),
+                hovertemplate="%{x|%Y-%m-%d}: $%{y:,.0f}<extra>MC VaR</extra>"
+            ))
+        if not fc_book.empty:
+            # Stitch from the last MC date so the chart connects
+            last_mc_date = mc_book["as_of_date"].max() if not mc_book.empty else None
+            last_mc_val  = float(mc_book.iloc[-1]["var_95"]) if not mc_book.empty else None
+            fc_x = fc_book["as_of_date"].tolist()
+            fc_y = fc_book["var_95_forecast"].tolist()
+            if last_mc_date is not None:
+                fc_x = [last_mc_date] + fc_x
+                fc_y = [last_mc_val]  + fc_y
+            fig.add_trace(go.Scatter(
+                x=fc_x, y=fc_y,
+                mode="lines+markers", name="ML Forecast (10-day)",
+                line=dict(color="#C85070", width=2, dash="dash"),
+                marker=dict(size=7),
+                hovertemplate="%{x|%Y-%m-%d}: $%{y:,.0f}<extra>ML Forecast</extra>"
+            ))
+
+        fig.update_layout(
+            title=f"{sel_book} — Monte Carlo VaR (actual) vs ML 10-day Forecast",
+            xaxis_title="Date", yaxis_title="VaR 95% ($)",
+            height=440, margin=dict(t=50),
+            legend=dict(orientation="h", y=-0.2)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Forecast table
+        if not fc_book.empty:
+            fc_tbl = fc_book[["as_of_date", "horizon_days", "var_95_forecast", "model_version"]].copy()
+            fc_tbl["var_95_forecast"] = fc_tbl["var_95_forecast"].round(0)
+            fc_tbl.columns = ["Forecast Date", "Horizon (bdays)", "VaR 95% Forecast ($)", "Model Version"]
+            with st.expander("Forecast detail"):
+                st.dataframe(fc_tbl, hide_index=True, use_container_width=True)
+
+        st.caption(
+            f"MC VaR: 95th-percentile loss from {mc_raw['as_of_date'].nunique() if not mc_raw.empty else 0} "
+            "simulation paths across all books (computed daily by notebook 13_calc_exposure). "
+            "ML Forecast: GBR model trained on historical book VaR time series with lag/rolling features, "
+            "registered in Unity Catalog as var_forecast_model @champion. "
+            "Model performance monitored weekly; retrains automatically if SMAPE degrades >10%."
+        )

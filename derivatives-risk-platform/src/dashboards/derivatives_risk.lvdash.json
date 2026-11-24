@@ -913,6 +913,25 @@
           }
         ]
       }
+    },
+    {
+      "name": "ds_var_ml_counters",
+      "displayName": "VaR ML Counters",
+      "queryLines": [
+        "SELECT mc.mc_var_latest, COALESCE(fc.ml_var_10d, 0) AS ml_forecast_10d, COALESCE(fc.model_version, 0) AS model_version, COALESCE(fc.forecast_date, current_date()) AS forecast_as_of\n",
+        "FROM (SELECT SUM(var_95) AS mc_var_latest FROM __CATALOG__.__SCHEMA__.gold_book_var WHERE time_step = 1 AND as_of_date = (SELECT MAX(as_of_date) FROM __CATALOG__.__SCHEMA__.gold_book_var)) mc\n",
+        "LEFT JOIN (SELECT var_95_forecast AS ml_var_10d, model_version, forecast_date FROM __CATALOG__.__SCHEMA__.gold_var_forecast WHERE book_id = 'TOTAL' AND horizon_days = 10 AND forecast_date = (SELECT MAX(forecast_date) FROM __CATALOG__.__SCHEMA__.gold_var_forecast) LIMIT 1) fc ON 1=1"
+      ]
+    },
+    {
+      "name": "ds_var_forecast_chart",
+      "displayName": "VaR Forecast vs MC (Chart)",
+      "queryLines": [
+        "SELECT as_of_date, 'MC VaR (1-day 95%)' AS series, SUM(var_95) AS var_usd FROM __CATALOG__.__SCHEMA__.gold_book_var WHERE time_step = 1 AND as_of_date >= date_sub(current_date(), 90) GROUP BY 1\n",
+        "UNION ALL\n",
+        "SELECT as_of_date, CONCAT('ML Forecast (', CAST(horizon_days AS STRING), 'd)') AS series, var_95_forecast AS var_usd FROM __CATALOG__.__SCHEMA__.gold_var_forecast WHERE book_id = 'TOTAL' AND forecast_date = (SELECT MAX(forecast_date) FROM __CATALOG__.__SCHEMA__.gold_var_forecast)\n",
+        "ORDER BY 1"
+      ]
     }
   ],
   "relationshipGraphs": [
@@ -4473,6 +4492,228 @@
             "y": 2,
             "width": 2,
             "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "page_var_forecast",
+      "displayName": "VaR Forecast",
+      "layout": [
+        {
+          "widget": {
+            "name": "txt_var_forecast_header",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## VaR Forecast\n",
+                "Compares the Monte Carlo 1-day 95% VaR (computed daily by notebook 13) with the ML 10-day ahead forecast (GBR model from notebook 16). Model is monitored weekly and retrains automatically when SMAPE degrades >10%."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "ctr_mc_var_latest",
+            "queries": [
+              {
+                "name": "main",
+                "query": {
+                  "datasetName": "ds_var_ml_counters",
+                  "fields": [
+                    {
+                      "name": "mc_var_latest",
+                      "expression": "MAX(`mc_var_latest`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "title": "Latest MC 1-day VaR 95% (Firm Total)",
+                "showTitle": true
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "mc_var_latest",
+                  "displayName": "MC VaR (USD)"
+                }
+              },
+              "data": {
+                "queryName": "main"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "ctr_ml_forecast_10d",
+            "queries": [
+              {
+                "name": "main",
+                "query": {
+                  "datasetName": "ds_var_ml_counters",
+                  "fields": [
+                    {
+                      "name": "ml_forecast_10d",
+                      "expression": "MAX(`ml_forecast_10d`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "title": "ML Forecast – 10-day ahead VaR 95% (TOTAL)",
+                "showTitle": true
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "ml_forecast_10d",
+                  "displayName": "ML Forecast (USD)"
+                }
+              },
+              "data": {
+                "queryName": "main"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "ctr_ml_model_version",
+            "queries": [
+              {
+                "name": "main",
+                "query": {
+                  "datasetName": "ds_var_ml_counters",
+                  "fields": [
+                    {
+                      "name": "model_version",
+                      "expression": "MAX(`model_version`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "frame": {
+                "title": "Model Version (@champion)",
+                "showTitle": true
+              },
+              "encodings": {
+                "value": {
+                  "fieldName": "model_version",
+                  "displayName": "Version"
+                }
+              },
+              "data": {
+                "queryName": "main"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 2,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "chart_var_forecast_vs_mc",
+            "queries": [
+              {
+                "name": "main",
+                "query": {
+                  "datasetName": "ds_var_forecast_chart",
+                  "fields": [
+                    {
+                      "name": "as_of_date",
+                      "expression": "`as_of_date`"
+                    },
+                    {
+                      "name": "series",
+                      "expression": "`series`"
+                    },
+                    {
+                      "name": "var_usd",
+                      "expression": "SUM(`var_usd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "frame": {
+                "title": "Monte Carlo VaR vs ML 10-day Forecast (Firm Total, USD)",
+                "showTitle": true
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "as_of_date",
+                  "displayName": "Date",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "var_usd",
+                  "displayName": "VaR 95% (USD)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "series",
+                  "displayName": "Series",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 12,
+            "height": 8
           }
         }
       ],

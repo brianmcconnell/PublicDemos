@@ -32,6 +32,7 @@ workspace:
 
 include:
   - resources/jobs/*.yml
+  - resources/pipelines/*.yml
   - resources/apps/*.yml
 
 # Fresh environments are built and removed with scripts/riskctl.py (deploy / destroy / status), which wraps

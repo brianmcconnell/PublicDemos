@@ -71,10 +71,40 @@ n_total = trades.count()
 q = spark.table(cfg.t("quarantine_trades")).select("trade_id").distinct()
 trades = trades.join(q, "trade_id", "left_anti")
 
-# netting key: netting set, or one 'NA' key per counterparty for trades without netting
-is_na = F.col("netting_set_id").isNull() | (F.col("netting_set_id") == "NA")
-trades = trades.withColumn("key", F.when(is_na, F.concat(F.lit("NA_"), F.col("counterparty_id")))
-                                   .otherwise(F.col("netting_set_id")))
+# netting key: validate against gold_netting_agreements (ISDA netting pipeline output).
+# A trade's netting_set_id is accepted only if it exists in gold_netting_agreements AND
+# netting_eligible=true. Otherwise the trade is treated as a standalone 'NA' key so it
+# still gets priced but without portfolio netting benefit.
+try:
+    gna = spark.table(cfg.t("gold_netting_agreements")).select(
+        "netting_set_id",
+        F.col("netting_eligible").alias("_net_eligible"),
+    )
+    trades = trades.join(F.broadcast(gna), "netting_set_id", "left")
+except Exception as _e:
+    # gold_netting_agreements not yet available (pipeline has not run) — fall back gracefully
+    print(f"WARN: gold_netting_agreements not available ({_e}); all trades treated as NA netting key")
+    trades = trades.withColumn("_net_eligible", F.lit(None).cast("boolean"))
+
+is_na = (
+    F.col("netting_set_id").isNull()
+    | (F.col("netting_set_id") == "NA")
+    | F.col("_net_eligible").isNull()          # netting set ID not in ISDA feed
+    | ~F.col("_net_eligible")                  # agreement marks as not eligible
+)
+trades = (
+    trades
+    .withColumn("_is_na", is_na)
+    .withColumn("key", F.when(is_na, F.concat(F.lit("NA_"), F.col("counterparty_id")))
+                        .otherwise(F.col("netting_set_id")))
+    .drop("_net_eligible")
+)
+n_netted   = trades.filter(~F.col("_is_na")).count()
+n_unnetted = trades.filter(F.col("_is_na")).count()
+trades = trades.drop("_is_na")
+print(f"Netting: {n_netted} trades with valid ISDA netting set, {n_unnetted} in NA keys")
+ev.metric("netted_trades",   n_netted)
+ev.metric("unnetted_trades", n_unnetted)
 key_counts = trades.groupBy("key").agg(F.count("*").alias("n")).toPandas()
 n_clean = int(key_counts.n.sum())
 print(f"Trades: {n_total} total, {n_clean} after quarantine, {len(key_counts)} netting keys")

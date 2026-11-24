@@ -1,0 +1,15 @@
+resources:
+  pipelines:
+    isda_netting:
+      name: "[${bundle.target}] isda-netting-pipeline"
+      catalog: ${var.catalog}
+      schema: ${var.schema}
+      channel: CURRENT
+      configuration:
+        catalog: ${var.catalog}
+        schema:  ${var.schema}
+      libraries:
+        - file:
+            path: ../../src/pipelines/isda_netting_pipeline.py
+      # Triggered (not continuous): run on demand by the isda_netting_job before risk_daily
+      continuous: false
