@@ -4,6 +4,7 @@ resources:
       name: "[${bundle.target}] isda-netting-pipeline"
       catalog: ${var.catalog}
       schema: ${var.schema}
+      serverless: true
       channel: CURRENT
       configuration:
         catalog: ${var.catalog}
