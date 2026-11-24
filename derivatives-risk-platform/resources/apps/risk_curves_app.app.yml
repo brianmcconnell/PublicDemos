@@ -34,3 +34,16 @@ resources:
           sql_warehouse:
             id: ${var.app_warehouse_id}
             permission: CAN_USE
+        # VaR Forecast tab: 1-day MC VaR actuals and ML forecasts (read through the SQL warehouse above)
+        - name: gold-book-var
+          description: 1-day MC VaR per book (VaR Forecast tab)
+          uc_securable:
+            securable_full_name: ${var.catalog}.${var.schema}.gold_book_var
+            securable_type: TABLE
+            permission: SELECT
+        - name: gold-var-forecast
+          description: ML VaR forecasts from notebook 16 (VaR Forecast tab)
+          uc_securable:
+            securable_full_name: ${var.catalog}.${var.schema}.gold_var_forecast
+            securable_type: TABLE
+            permission: SELECT

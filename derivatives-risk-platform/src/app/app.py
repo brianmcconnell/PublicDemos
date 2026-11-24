@@ -562,11 +562,12 @@ def load_forecast_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     """Load latest MC VaR actuals and ML forecast via SQL warehouse."""
     try:
         import wh
-        # Latest available MC VaR (all books + each book, last 60 days)
+        # 1-day MC VaR per book, last 90 days. gold_book_var has one row per time_step on the
+        # simulation grid; time_step 1 is the 1-day horizon (same series the ML model is trained on).
         mc_df = wh.wh_query(f"""
             SELECT as_of_date, book_id, var_95, expected_shortfall_95
             FROM {CATALOG}.{SCHEMA}.gold_book_var
-            WHERE as_of_date >= date_sub(current_date(), 90)
+            WHERE time_step = 1 AND as_of_date >= date_sub(current_date(), 90)
             ORDER BY book_id, as_of_date
         """)
         # Latest forecast batch (most recent forecast_date)
@@ -582,15 +583,19 @@ def load_forecast_data() -> tuple[pd.DataFrame, pd.DataFrame]:
             if col in mc_df:
                 mc_df[col] = pd.to_numeric(mc_df[col], errors="coerce")
         fc_df["var_95_forecast"] = pd.to_numeric(fc_df["var_95_forecast"], errors="coerce")
+        for col in ["horizon_days", "model_version"]:
+            if col in fc_df:
+                fc_df[col] = pd.to_numeric(fc_df[col], errors="coerce").astype("Int64")
         return mc_df, fc_df
     except Exception as e:
-        return pd.DataFrame(), pd.DataFrame()
+        # Surface the failure (e.g. missing SELECT grant) instead of showing an empty tab
+        raise RuntimeError(f"forecast query failed: {e}") from e
 
 
 with tab_forecast:
     st.caption(
         "Compares the 95% 1-day VaR from the Monte Carlo simulation (actual, computed by notebook 13) "
-        "with the 10-business-day ML forecast (GBR model trained by notebook 16, monitored weekly by notebook 17). "
+        "with the 10-business-day ML forecast (per-book Prophet / ARIMA champions trained by notebook 16). "
         "The forecast is regenerated each Monday morning."
     )
     try:
@@ -682,7 +687,7 @@ with tab_forecast:
         st.caption(
             f"MC VaR: 95th-percentile loss from {mc_raw['as_of_date'].nunique() if not mc_raw.empty else 0} "
             "simulation paths across all books (computed daily by notebook 13_calc_exposure). "
-            "ML Forecast: GBR model trained on historical book VaR time series with lag/rolling features, "
+            "ML Forecast: per-book Prophet vs ARIMA (lower holdout SMAPE wins) on the 1-day VaR history, "
             "registered in Unity Catalog as var_forecast_model @champion. "
-            "Model performance monitored weekly; retrains automatically if SMAPE degrades >10%."
+            "Forecast quality improves as daily VaR history accumulates."
         )
