@@ -1,7 +1,7 @@
 ## Stage: 02_bootstrap_curves
 
-* started (UTC): `2026-11-20 11:02:53`
-* finished (UTC): `2026-11-20 11:03:07`  (13.7s)
+* started (UTC): `2026-11-24 15:44:09`
+* finished (UTC): `2026-11-24 15:44:20`  (11.0s)
 
 **Checks**
 
@@ -9,6 +9,6 @@
 | --- | --- | --- |
 | USD curve | PASS | bootstrap ran |
 | all currencies | PASS | 6 currencies |
-* as_of: `2026-11-20`
-* curve_date: `2026-11-05`
-* curve rows: `32`
+* as_of: `2026-11-24`
+* curve_date: `2026-11-20`
+* curve rows: `42`
