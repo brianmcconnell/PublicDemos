@@ -1,7 +1,7 @@
 ## Stage: 13_calc_exposure
 
-* started (UTC): `2026-11-24 15:51:04`
-* finished (UTC): `2026-11-24 15:56:54`  (349.4s)
+* started (UTC): `2026-11-24 19:33:11`
+* finished (UTC): `2026-11-24 19:39:25`  (373.8s)
 
 **Checks**
 
@@ -14,10 +14,12 @@
 | steps per cpty | PASS | 46 steps |
 * as_of: `2026-11-24`
 * cube_path: `/Volumes/serverless_stable_7s0j2u_catalog/market/sim_cubes/cube_2026-11-24.npz`
+* netted_trades: `0`
+* unnetted_trades: `166198`
 * total trades: `166941`
 * clean trades: `166198`
 * bins: `664`
-* pricing seconds: `272`
+* pricing seconds: `299`
 * exposure rows: `44160`
 * counterparties: `300`
 

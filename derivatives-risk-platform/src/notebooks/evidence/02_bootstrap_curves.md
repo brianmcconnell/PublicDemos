@@ -1,7 +1,7 @@
 ## Stage: 02_bootstrap_curves
 
-* started (UTC): `2026-11-24 15:44:09`
-* finished (UTC): `2026-11-24 15:44:20`  (11.0s)
+* started (UTC): `2026-11-24 19:28:27`
+* finished (UTC): `2026-11-24 19:28:40`  (13.6s)
 
 **Checks**
 

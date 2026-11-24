@@ -1,7 +1,7 @@
 ## Stage: 15_calc_sensitivities
 
-* started (UTC): `2026-11-24 15:57:10`
-* finished (UTC): `2026-11-24 16:00:07`  (176.6s)
+* started (UTC): `2026-11-24 19:39:42`
+* finished (UTC): `2026-11-24 19:41:19`  (97.0s)
 
 **Checks**
 
@@ -12,10 +12,10 @@
 | hierarchy books = TOTAL | PASS | 277,671,039 |
 | sum of key rates ~ parallel DV01 (per trade, vs gross DV01) | PASS | rel diff 8.2e-05 |
 | VaR history recorded | PASS | 1150 rows, as_of 2026-11-24 |
-* run_id: `518932286693986`
+* run_id: `668435503052857`
 * as_of: `2026-11-24`
 * trades: `166198`
-* pricing seconds: `120`
+* pricing seconds: `62`
 * gold_trade_mtm_history: `166198`
 * gold_trade_sensitivity_history: `1144621`
 * gold_risk_hierarchy_history: `7883`
@@ -29,10 +29,10 @@
 
 | measure | value_usd |
 | --- | --- |
-| EQ_VEGA | 1.87733e+06 |
 | MTM | 2.77671e+08 |
-| FX_DELTA | -5.5212e+07 |
-| EQ_DELTA | 2.46212e+06 |
-| IR_DV01 | 143,543 |
 | IR_KRD | 143,496 |
+| EQ_VEGA | 1.87733e+06 |
+| IR_DV01 | 143,543 |
+| FX_DELTA | -5.5212e+07 |
 | EQ_GAMMA | 74,200 |
+| EQ_DELTA | 2.46212e+06 |

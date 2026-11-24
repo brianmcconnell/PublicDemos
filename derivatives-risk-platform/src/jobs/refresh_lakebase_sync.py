@@ -3,8 +3,11 @@
 The synced tables share one pipeline per environment; it is found from the synced tables themselves, so no
 pipeline id is configured. If no synced table exists yet (first bootstrap run, before configure_serving) it skips.
 """
-import argparse, os, sys, time
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import argparse, inspect, os, sys, time
+try:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+except NameError:  # serverless exec() context — __file__ not set
+    sys.path.insert(0, os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))))
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.errors import NotFound
 from lakebase_spec import SYNCED_TABLES, synced_name

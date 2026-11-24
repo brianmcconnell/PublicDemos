@@ -1,14 +1,14 @@
 ## Stage: 01_ingest_fred
 
-* started (UTC): `2026-11-24 15:42:40`
-* finished (UTC): `2026-11-24 15:43:12`  (32.0s)
+* started (UTC): `2026-11-24 19:27:04`
+* finished (UTC): `2026-11-24 19:27:34`  (30.3s)
 
 **Checks**
 
 | check | result | detail |
 | --- | --- | --- |
-| rows loaded | PASS | 35 rows |
-* date range: `2026-11-20 to 2026-11-23`
+| rows loaded | PASS | 0 rows |
+* date range: `2026-11-24 to 2026-11-23`
 * n_series: `41`
-* rows fetched: `35`
-* failed series: `[]`
+* rows fetched: `0`
+* failed series: `['DGS1MO', 'DGS3MO', 'DGS6MO', 'DGS1', 'DGS2', 'DGS3', 'DGS5', 'DGS7', 'DGS10', 'DGS20', 'DGS30', 'SOFR', 'DFF', 'ECBESTRVOLWGTTRMDMNRT', 'IUDSOIA', 'IR3TIB01EZM156N', 'IRLTLT01EZM156N', 'IR3TIB01GBM156N', 'IRLTLT01GBM156N', 'IR3TIB01JPM156N', 'IRLTLT01JPM156N', 'IR3TIB01CHM156N', 'IRLTLT01CHM156N', 'IR3TIB01CAM156N', 'IRLTLT01CAM156N', 'DEXUSEU', 'DEXUSUK', 'DEXJPUS', 'DEXSZUS', 'DEXCAUS', 'BAMLC0A1CAAA', 'BAMLC0A2CAA', 'BAMLC0A3CA', 'BAMLC0A4CBBB', 'BAMLH0A1HYBB', 'BAMLH0A2HYB', 'BAMLH0A3HYC', 'DFII5', 'DFII10', 'T5YIE', 'T10YIE']`
